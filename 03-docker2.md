@@ -1,4 +1,3 @@
----
 
 # 11. Instalar o MySpeed
 
