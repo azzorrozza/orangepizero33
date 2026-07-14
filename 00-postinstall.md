@@ -64,11 +64,3 @@ apt list --upgradable
 ```
 
 ---
-
-# Estado esperado
-
-- ✔ Sistema atualizado
-- ✔ Kernel atualizado (quando disponível)
-- ✔ Firmware atualizado (quando disponível)
-- ✔ Equipamento reiniciado
-- ✔ Pronto para a instalação dos demais serviços
