@@ -100,20 +100,12 @@ Criar a estrutura principal utilizada pelos containers:
 
 ```bash
 mkdir -p /opt/docker
-mkdir -p /opt/docker/compose
 ```
 
 Verificar:
 
 ```bash
 tree /opt/docker
-```
-
-Resultado esperado:
-
-```text
-/opt/docker
-└── compose
 ```
 
 > Cada aplicação criará seus próprios diretórios durante sua instalação.
