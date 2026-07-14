@@ -8,8 +8,6 @@ Ao final deste guia será possível:
 - armazenar as chaves na pasta **Downloads**;
 - instalar a chave pública na OrangePi;
 - acessar o servidor utilizando apenas a chave privada;
-- configurar um atalho utilizando o arquivo `config`;
-- remover e substituir chaves quando necessário;
 - desabilitar autenticação por senha;
 - recuperar o acesso caso a chave seja perdida.
 
@@ -69,7 +67,11 @@ Copiar automaticamente a chave pública para a área de transferência:
 Get-Content C:\Users\azzor\Downloads\azzor_ed25519.pub | Set-Clipboard
 ```
 
-Conecte-se normalmente via SSH utilizando senha.
+Conecte-se normalmente via SSH utilizando senha:
+
+```powershell
+ssh root@192.168.1.20
+```
 
 Criar o diretório caso não exista:
 
@@ -78,13 +80,14 @@ mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 ```
 
-Editar o arquivo:
+Criar o arquivo de chaves autorizadas:
 
 ```bash
+touch ~/.ssh/authorized_keys
 nano ~/.ssh/authorized_keys
 ```
 
-Cole a chave pública em uma única linha.
+Cole a chave pública em **uma única linha**.
 
 Salvar.
 
@@ -92,6 +95,12 @@ Corrigir as permissões:
 
 ```bash
 chmod 600 ~/.ssh/authorized_keys
+```
+
+Verificar o conteúdo:
+
+```bash
+cat ~/.ssh/authorized_keys
 ```
 
 ---
@@ -104,97 +113,13 @@ No Windows:
 ssh -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
 ```
 
-Se tudo estiver correto, o login ocorrerá sem solicitar senha.
+Se tudo estiver correto, o login ocorrerá utilizando a chave privada.
+
+Caso tenha definido uma **passphrase** durante a criação da chave, ela será solicitada.
 
 ---
 
-# 4. Criar um atalho utilizando o arquivo config
-
-Criar o diretório (caso não exista):
-
-```powershell
-New-Item -ItemType Directory -Force $HOME\.ssh
-```
-
-Editar:
-
-```text
-C:\Users\azzor\.ssh\config
-```
-
-Conteúdo:
-
-```text
-Host orangepi
-
-    HostName 192.168.1.20
-
-    User root
-
-    IdentityFile C:\Users\azzor\Downloads\azzor_ed25519
-```
-
-Verificar:
-
-```powershell
-type $HOME\.ssh\config
-```
-
-Agora basta conectar utilizando:
-
-```powershell
-ssh orangepi
-```
-
----
-
-# 5. Verificar as chaves autorizadas
-
-Visualizar:
-
-```bash
-cat ~/.ssh/authorized_keys
-```
-
-Cada linha representa uma chave autorizada.
-
----
-
-# 6. Adicionar uma nova chave
-
-Editar:
-
-```bash
-nano ~/.ssh/authorized_keys
-```
-
-Adicionar a nova chave em uma nova linha.
-
-Salvar.
-
-> **Importante:** nunca remova a chave antiga antes de confirmar que a nova chave funciona.
-
-Teste o acesso utilizando a nova chave em um novo terminal.
-
-Somente depois remova a chave antiga.
-
----
-
-# 7. Remover uma chave
-
-Editar:
-
-```bash
-nano ~/.ssh/authorized_keys
-```
-
-Remover a linha correspondente à chave desejada.
-
-Salvar.
-
----
-
-# 8. Desabilitar autenticação por senha
+# 4. Desabilitar autenticação por senha
 
 Editar:
 
@@ -221,16 +146,16 @@ systemctl restart ssh
 
 ---
 
-# 9. Testar antes de fechar a sessão atual
+# 5. Testar antes de fechar a sessão atual
 
 **Muito importante**
 
 Não feche a sessão SSH atual.
 
-Abra um **novo terminal** e execute:
+Abra um **novo terminal** no Windows e execute:
 
 ```powershell
-ssh orangepi
+ssh -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
 ```
 
 Confirme que o login funciona utilizando apenas a chave.
@@ -239,7 +164,7 @@ Somente após confirmar, encerre a sessão antiga.
 
 ---
 
-# 10. (Opcional) Bloquear login direto do root
+# 6. (Opcional) Bloquear login direto do root
 
 Caso futuramente seja criado um usuário administrador, recomenda-se impedir login direto do root.
 
@@ -272,8 +197,6 @@ systemctl restart ssh
 # Recuperação de acesso
 
 Caso a chave seja perdida e ainda exista acesso físico à OrangePi (monitor e teclado, console serial ou outro método de administração), é possível restaurar o acesso.
-
-## Reativar autenticação por senha
 
 Editar:
 
@@ -318,8 +241,6 @@ ss -tlnp | grep :22
 
 ## Verificar a versão do SSH
 
-No servidor:
-
 ```bash
 ssh -V
 ```
@@ -331,7 +252,7 @@ ssh -V
 No Windows:
 
 ```powershell
-ssh -v orangepi
+ssh -v -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
 ```
 
 Resultado esperado:
@@ -390,9 +311,7 @@ permitrootlogin no
 - ✔ Chave SSH ED25519 criada
 - ✔ Chave pública instalada na OrangePi
 - ✔ Autenticação por chave funcionando
-- ✔ Arquivo `config` configurado no Windows
 - ✔ Login utilizando chave SSH funcionando
 - ✔ Login por senha desabilitado
 - ✔ Permissões do SSH ajustadas corretamente
-- ✔ Procedimento para troca de chaves documentado
 - ✔ Procedimento de recuperação de acesso documentado
