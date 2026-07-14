@@ -6,16 +6,7 @@ O servidor passa a resolver consultas diretamente na Internet, sem depender de s
 
 ---
 
-# 1. Atualizar o sistema
-
-```bash
-apt update && apt upgrade -y
-armbian-upgrade
-```
-
----
-
-# 2. Instalar o Unbound
+# 1. Instalar o Unbound
 
 > **Importante (Debian 13 / Armbian Trixie):**
 >
@@ -37,7 +28,7 @@ systemctl enable unbound
 
 ---
 
-# 3. Liberar a porta 53
+# 2. Liberar a porta 53
 
 Por padrão o **systemd-resolved** ocupa a porta 53 através do DNS Stub Listener.
 
@@ -74,7 +65,7 @@ O `systemd-resolved` continuará escutando apenas na porta **5355**.
 
 ---
 
-# 4. Configurar o Unbound
+# 3. Configurar o Unbound
 
 Editar:
 
@@ -146,7 +137,7 @@ server:
 
 ---
 
-# 5. Inicializar a Trust Anchor (DNSSEC)
+# 4. Inicializar a Trust Anchor (DNSSEC)
 
 Na primeira instalação o arquivo ainda não existe.
 
@@ -183,7 +174,7 @@ Resultado esperado:
 
 ---
 
-# 6. Validar a configuração
+# 5. Validar a configuração
 
 ```bash
 unbound-checkconf
@@ -206,7 +197,7 @@ Resultado esperado:
 
 ---
 
-# 7. Iniciar o serviço
+# 6. Iniciar o serviço
 
 ```bash
 systemctl restart unbound
@@ -226,7 +217,7 @@ Active: active (running)
 
 ---
 
-# 8. Verificar o helper da Trust Anchor
+# 7. Verificar o helper da Trust Anchor
 
 O helper do Debian executa automaticamente:
 
@@ -290,7 +281,7 @@ Após instalar `dns-root-data`, o helper passa a funcionar corretamente.
 
 ---
 
-# 9. Configurar o resolvedor do sistema
+# 8. Configurar o resolvedor do sistema
 
 **Não substitua o `/etc/resolv.conf`.**
 
