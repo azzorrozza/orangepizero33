@@ -380,16 +380,3 @@ docker compose up -d
 Na próxima inicialização será gerado um novo **Setup Token**, permitindo criar novamente o usuário administrador.
 
 ---
-
-# Estado atual
-
-* ✔ Docker CE instalado
-* ✔ Docker Compose Plugin instalado
-* ✔ Docker Buildx instalado
-* ✔ Containerd instalado
-* ✔ Estrutura de diretórios criada
-* ✔ Rede Docker `services` criada
-* ✔ Portainer CE instalado
-* ✔ Setup Token disponível para inicialização do Portainer
-* ✔ Serviço Docker iniciado automaticamente no boot
-* ✔ Container de teste executado com sucesso
