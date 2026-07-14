@@ -42,7 +42,7 @@ C:\Users\azzor\Downloads\
 Onde:
 
 - `azzor_ed25519` → chave privada (**NUNCA compartilhe**)
-- `azzor_ed25519.pub` → chave pública (pode ser instalada no servidor)
+- `azzor_ed25519.pub` → chave pública (será instalada no servidor)
 
 Verifique se os arquivos foram criados:
 
@@ -67,13 +67,13 @@ Copiar automaticamente a chave pública para a área de transferência:
 Get-Content C:\Users\azzor\Downloads\azzor_ed25519.pub | Set-Clipboard
 ```
 
-Conecte-se normalmente via SSH utilizando senha:
+Conecte-se normalmente utilizando senha:
 
 ```powershell
 ssh root@192.168.1.20
 ```
 
-Criar o diretório caso não exista:
+Criar o diretório do SSH:
 
 ```bash
 mkdir -p ~/.ssh
@@ -87,9 +87,17 @@ touch ~/.ssh/authorized_keys
 nano ~/.ssh/authorized_keys
 ```
 
-Cole a chave pública em **uma única linha**.
+Cole **todo o conteúdo** da chave pública exatamente como foi gerado.
 
-Salvar.
+Exemplo:
+
+```text
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH3rMpLejpN7NPPhPbdnZOz1yg03qa8Ex35h6PCcc8yo azzor
+```
+
+> **Importante:** copie a linha inteira, incluindo o início `ssh-ed25519`.
+
+Salvar o arquivo.
 
 Corrigir as permissões:
 
@@ -97,7 +105,7 @@ Corrigir as permissões:
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-Verificar o conteúdo:
+Confirmar:
 
 ```bash
 cat ~/.ssh/authorized_keys
@@ -107,19 +115,23 @@ cat ~/.ssh/authorized_keys
 
 # 3. Testar o acesso utilizando a chave
 
-No Windows:
+Abra um **novo PowerShell**.
+
+Execute:
 
 ```powershell
 ssh -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
 ```
 
-Se tudo estiver correto, o login ocorrerá utilizando a chave privada.
-
 Caso tenha definido uma **passphrase** durante a criação da chave, ela será solicitada.
+
+Se tudo estiver correto, o login será realizado **sem solicitar a senha do usuário root**, utilizando apenas a chave SSH.
 
 ---
 
 # 4. Desabilitar autenticação por senha
+
+Somente após confirmar que a autenticação por chave funciona corretamente.
 
 Editar:
 
@@ -127,9 +139,10 @@ Editar:
 nano /etc/ssh/sshd_config
 ```
 
-Localizar e alterar (ou adicionar) as seguintes opções:
+Garantir que existam as seguintes opções:
 
 ```text
+PermitRootLogin yes
 PubkeyAuthentication yes
 PasswordAuthentication no
 ChallengeResponseAuthentication no
@@ -152,15 +165,15 @@ systemctl restart ssh
 
 Não feche a sessão SSH atual.
 
-Abra um **novo terminal** no Windows e execute:
+Abra um segundo terminal no Windows e execute:
 
 ```powershell
 ssh -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
 ```
 
-Confirme que o login funciona utilizando apenas a chave.
+Se o login ocorrer normalmente utilizando apenas a chave SSH, a configuração está correta.
 
-Somente após confirmar, encerre a sessão antiga.
+Somente então encerre a sessão antiga.
 
 ---
 
@@ -196,7 +209,7 @@ systemctl restart ssh
 
 # Recuperação de acesso
 
-Caso a chave seja perdida e ainda exista acesso físico à OrangePi (monitor e teclado, console serial ou outro método de administração), é possível restaurar o acesso.
+Caso a chave seja perdida e ainda exista acesso físico à OrangePi (monitor, teclado ou console serial), é possível restaurar o acesso.
 
 Editar:
 
@@ -217,7 +230,12 @@ Reiniciar o SSH:
 systemctl restart ssh
 ```
 
-Após conseguir acessar novamente, gere um novo par de chaves, instale a nova chave pública em `~/.ssh/authorized_keys`, teste o acesso e, por fim, desabilite novamente a autenticação por senha.
+Após recuperar o acesso:
+
+- gere uma nova chave;
+- instale a nova chave pública;
+- confirme que ela funciona;
+- desabilite novamente a autenticação por senha.
 
 ---
 
@@ -277,9 +295,9 @@ stat ~/.ssh/authorized_keys
 Resultado esperado:
 
 ```text
-~/.ssh                 -> 700
+~/.ssh              -> 700
 
-authorized_keys        -> 600
+authorized_keys     -> 600
 ```
 
 ---
@@ -309,9 +327,10 @@ permitrootlogin no
 # Estado atual
 
 - ✔ Chave SSH ED25519 criada
+- ✔ Chave armazenada em `Downloads`
 - ✔ Chave pública instalada na OrangePi
-- ✔ Autenticação por chave funcionando
+- ✔ Permissões do SSH configuradas corretamente
 - ✔ Login utilizando chave SSH funcionando
-- ✔ Login por senha desabilitado
-- ✔ Permissões do SSH ajustadas corretamente
+- ✔ Autenticação por senha desabilitada
+- ✔ Acesso protegido por chave e passphrase
 - ✔ Procedimento de recuperação de acesso documentado
