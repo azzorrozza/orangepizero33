@@ -304,8 +304,7 @@ Resultado esperado:
 
 ```text
 /opt/docker
-├── compose
-└── portainer
+├── portainer
     └── data
 ```
 
