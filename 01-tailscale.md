@@ -10,19 +10,7 @@ Ao final deste guia, a OrangePi estará pronta para oferecer acesso remoto segur
 
 ---
 
-# 1. Atualizar o sistema
-
-Antes de iniciar a configuração, atualize todos os pacotes do sistema para garantir compatibilidade com as versões mais recentes do Armbian e do Tailscale.
-
-```bash
-apt update && apt upgrade -y
-armbian-upgrade
-reboot
-```
-
----
-
-# 2. Instalar o Tailscale
+# 1. Instalar o Tailscale
 
 Instale o Tailscale utilizando o instalador oficial.
 
@@ -37,7 +25,7 @@ Após executar `tailscale up`, siga o link exibido no terminal para autenticar a
 
 ---
 
-# 3. Habilitar o encaminhamento de pacotes (IP Forwarding)
+# 2. Habilitar o encaminhamento de pacotes (IP Forwarding)
 
 Para que a OrangePi possa atuar como **Exit Node** e **Subnet Router**, é necessário habilitar o encaminhamento de pacotes IPv4 e IPv6.
 
@@ -64,7 +52,7 @@ cat /etc/sysctl.d/99-tailscale.conf
 
 ---
 
-# 4. Configurar o anúncio automático da Subnet
+# 3. Configurar o anúncio automático da Subnet
 
 Para evitar alterações manuais sempre que a rede local mudar, utilizaremos o **networkd-dispatcher** para detectar automaticamente a subnet configurada na interface Ethernet (`end0`) e atualizá-la no Tailscale.
 
@@ -133,7 +121,7 @@ systemctl restart networkd-dispatcher
 
 ---
 
-# 5. Habilitar UDP GRO Forwarding
+# 4. Habilitar UDP GRO Forwarding
 
 O Tailscale recomenda habilitar o recurso **UDP GRO Forwarding** para melhorar o desempenho quando o dispositivo atua como **Exit Node**, reduzindo o processamento de pacotes e aumentando a eficiência da interface de rede.
 
@@ -183,7 +171,7 @@ Essa configuração garante que o recurso seja habilitado automaticamente a cada
 
 ---
 
-# 6. Verificações locais
+# 5. Verificações locais
 
 Antes de utilizar a OrangePi como Exit Node e Subnet Router, confirme que todos os serviços necessários estão habilitados e que o recurso UDP GRO está ativo.
 
@@ -206,7 +194,7 @@ Resultado esperado:
 
 ---
 
-# 7. Aprovar no Admin Console e validar
+# 6. Aprovar no Admin Console e validar
 
 Acesse o **Admin Console** do Tailscale e aprove:
 
