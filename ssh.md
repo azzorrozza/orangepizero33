@@ -4,14 +4,14 @@ Este guia configura o acesso remoto via **SSH utilizando autenticação por chav
 
 Ao final deste guia será possível:
 
-* gerar um par de chaves SSH no Windows;
-* armazenar as chaves na pasta **Downloads**;
-* instalar a chave pública na OrangePi;
-* acessar o servidor utilizando apenas a chave privada;
-* configurar um atalho utilizando o arquivo `config`;
-* remover e substituir chaves quando necessário;
-* desabilitar autenticação por senha;
-* recuperar o acesso caso a chave seja perdida.
+- gerar um par de chaves SSH no Windows;
+- armazenar as chaves na pasta **Downloads**;
+- instalar a chave pública na OrangePi;
+- acessar o servidor utilizando apenas a chave privada;
+- configurar um atalho utilizando o arquivo `config`;
+- remover e substituir chaves quando necessário;
+- desabilitar autenticação por senha;
+- recuperar o acesso caso a chave seja perdida.
 
 ---
 
@@ -22,38 +22,52 @@ No Windows, abra o **PowerShell**.
 Execute:
 
 ```powershell
-ssh-keygen -t ed25519 -C "orangepi"
+ssh-keygen -t ed25519 -C "azzor"
 ```
 
-Quando for solicitado o local para salvar a chave, informe:
+Quando o comando solicitar o local para salvar a chave, informe o caminho completo incluindo o nome do arquivo:
 
 ```text
-C:\Users\SEU_USUARIO\Downloads\orangepi_ed25519
+C:\Users\azzor\Downloads\azzor_ed25519
 ```
+
+> **Importante:** informe um **nome de arquivo**, e não apenas a pasta `Downloads`. Caso informe somente o diretório, o `ssh-keygen` exibirá um erro informando que o caminho já existe.
 
 Será criado:
 
 ```text
-orangepi_ed25519
-orangepi_ed25519.pub
+C:\Users\azzor\Downloads\
+├── azzor_ed25519
+└── azzor_ed25519.pub
 ```
 
 Onde:
 
-* `orangepi_ed25519` → chave privada (NUNCA compartilhe)
-* `orangepi_ed25519.pub` → chave pública (pode ser instalada no servidor)
+- `azzor_ed25519` → chave privada (**NUNCA compartilhe**)
+- `azzor_ed25519.pub` → chave pública (pode ser instalada no servidor)
+
+Verifique se os arquivos foram criados:
+
+```powershell
+dir C:\Users\azzor\Downloads\azzor*
+```
+
+Resultado esperado:
+
+```text
+azzor_ed25519
+azzor_ed25519.pub
+```
 
 ---
 
 # 2. Instalar a chave na OrangePi
 
-Abra a chave pública:
+Copiar automaticamente a chave pública para a área de transferência:
 
 ```powershell
-notepad C:\Users\SEU_USUARIO\Downloads\orangepi_ed25519.pub
+Get-Content C:\Users\azzor\Downloads\azzor_ed25519.pub | Set-Clipboard
 ```
-
-Copie todo o conteúdo.
 
 Conecte-se normalmente via SSH utilizando senha.
 
@@ -87,7 +101,7 @@ chmod 600 ~/.ssh/authorized_keys
 No Windows:
 
 ```powershell
-ssh -i C:\Users\SEU_USUARIO\Downloads\orangepi_ed25519 root@192.168.1.20
+ssh -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
 ```
 
 Se tudo estiver correto, o login ocorrerá sem solicitar senha.
@@ -99,13 +113,13 @@ Se tudo estiver correto, o login ocorrerá sem solicitar senha.
 Criar o diretório (caso não exista):
 
 ```powershell
-mkdir $HOME\.ssh
+New-Item -ItemType Directory -Force $HOME\.ssh
 ```
 
 Editar:
 
 ```text
-C:\Users\SEU_USUARIO\.ssh\config
+C:\Users\azzor\.ssh\config
 ```
 
 Conteúdo:
@@ -117,7 +131,13 @@ Host orangepi
 
     User root
 
-    IdentityFile C:\Users\SEU_USUARIO\Downloads\orangepi_ed25519
+    IdentityFile C:\Users\azzor\Downloads\azzor_ed25519
+```
+
+Verificar:
+
+```powershell
+type $HOME\.ssh\config
 ```
 
 Agora basta conectar utilizando:
@@ -152,7 +172,11 @@ Adicionar a nova chave em uma nova linha.
 
 Salvar.
 
-Antes de remover a chave antiga, teste o acesso utilizando a nova chave.
+> **Importante:** nunca remova a chave antiga antes de confirmar que a nova chave funciona.
+
+Teste o acesso utilizando a nova chave em um novo terminal.
+
+Somente depois remova a chave antiga.
 
 ---
 
@@ -363,11 +387,12 @@ permitrootlogin no
 
 # Estado atual
 
-* ✔ Chave SSH ED25519 criada
-* ✔ Chave pública instalada na OrangePi
-* ✔ Autenticação por chave funcionando
-* ✔ Arquivo `config` configurado no Windows
-* ✔ Login por senha desabilitado
-* ✔ Permissões do SSH ajustadas corretamente
-* ✔ Procedimento para troca de chaves documentado
-* ✔ Procedimento de recuperação de acesso documentado
+- ✔ Chave SSH ED25519 criada
+- ✔ Chave pública instalada na OrangePi
+- ✔ Autenticação por chave funcionando
+- ✔ Arquivo `config` configurado no Windows
+- ✔ Login utilizando chave SSH funcionando
+- ✔ Login por senha desabilitado
+- ✔ Permissões do SSH ajustadas corretamente
+- ✔ Procedimento para troca de chaves documentado
+- ✔ Procedimento de recuperação de acesso documentado
