@@ -2,6 +2,7 @@
 
 ```
 
+#Sistema
 cat /etc/os-release
 uname -a
 
