@@ -5,9 +5,6 @@
 cat /etc/os-release
 uname -a
 
-apt update
-apt list --upgradable
-
 df -h
 free -h
 
