@@ -388,6 +388,8 @@ Esses contadores aumentam conforme o servidor é utilizado.
 ---
 
 ```
+systemctl mask unbound-resolvconf.service
+systemctl reset-failed
 nano /etc/netplan/*.yaml
 ```
 
