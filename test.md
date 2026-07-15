@@ -55,5 +55,30 @@ resolvectl query openai.com
 
 unbound-control stats_noreset
 
-reboot
+docker --version
+
+docker compose version
+
+docker info
+
+docker ps -a
+
+docker compose ls
+
+docker network ls
+
+docker run hello-world
+
+systemctl is-enabled docker
+
+systemctl is-active docker
+
+systemctl status docker --no-pager
+
+docker logs portainer
+
+tree /opt/docker
+
+cat /opt/docker/portainer/docker-compose.yml
+
 ```
