@@ -60,3 +60,8 @@ netplan generate
 ```
 netplan apply
 ```
+
+
+```
+apt install libnss-resolve
+```
