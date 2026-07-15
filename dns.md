@@ -1,5 +1,13 @@
 
 ```
+cp /etc/netplan/*.yaml /root/netplan-backup.yaml
+```
+
+```
+nano /etc/netplan/*.yaml
+```
+
+```
 # Added by Armbian
 #
 # Reference: https://netplan.readthedocs.io/en/stable/netplan-yaml/
@@ -45,3 +53,10 @@ network:
       ipv6-privacy: yes
 ```
 
+```
+netplan generate
+```
+
+```
+netplan apply
+```
