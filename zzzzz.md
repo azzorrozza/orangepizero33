@@ -37,12 +37,24 @@ apt update
 ```
 
 ```bash
+apt policy docker-ce
+```
+
+```bash
 apt install -y \
 docker-ce \
 docker-ce-cli \
 containerd.io \
 docker-buildx-plugin \
 docker-compose-plugin
+```
+
+```bash
+docker --version
+```
+
+```bash
+docker compose version
 ```
 
 ```bash
@@ -67,6 +79,10 @@ tree /opt/docker
 
 ```bash
 docker network create services
+```
+
+```bash
+docker network inspect services
 ```
 
 ```bash
