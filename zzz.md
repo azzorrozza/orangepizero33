@@ -13,6 +13,8 @@ reboot
 curl -fsSL https://tailscale.com/install.sh | sh
 ```
 
+Autenticar o dispositivo:
+
 ```bash
 tailscale up
 ```
@@ -125,6 +127,55 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 ```
 
+```bash
+cat /etc/systemd/system/ethtool-end0.service
+```
 
+```bash
+systemctl daemon-reload
+```
+
+```bash
+systemctl enable ethtool-end0.service
+```
+
+```bash
+systemctl start ethtool-end0.service
+```
+
+```bash
+ethtool -k end0 | grep udp
+```
+
+```bash
+systemctl is-enabled tailscaled
+```
+
+```bash
+systemctl is-enabled networkd-dispatcher
+```
+
+```bash
+systemctl is-enabled ethtool-end0.service
+```
+
+Acesse o **Admin Console** do Tailscale e aprove:
+
+- **Exit Node**
+- **Subnet Route**
+
+Após a aprovação, execute:
+
+```bash
+tailscale status
+```
+
+```bash
+tailscale debug prefs | grep -A5 AdvertiseRoutes
+```
+
+```bash
+tailscale netcheck
+```
 
 ---
