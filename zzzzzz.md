@@ -3,7 +3,13 @@
 
 ```bash
 mkdir -p /opt/docker/pihole
+```
+
+```bash
 mkdir -p /opt/docker/pihole/etc-pihole
+```
+
+```bash
 mkdir -p /opt/docker/pihole/etc-dnsmasq.d
 ```
 
