@@ -1,4 +1,3 @@
-
 ---
 
 ```bash
@@ -30,6 +29,14 @@ net.ipv6.conf.all.forwarding = 1
 
 ```bash
 sysctl -p /etc/sysctl.d/99-tailscale.conf
+```
+
+```bash
+sysctl net.ipv4.ip_forward
+```
+
+```bash
+sysctl net.ipv6.conf.all.forwarding
 ```
 
 ```bash
@@ -90,11 +97,23 @@ chmod +x /etc/networkd-dispatcher/routable.d/50-tailscale-route
 ```
 
 ```bash
+bash -n /etc/networkd-dispatcher/routable.d/50-tailscale-route
+```
+
+```bash
 systemctl restart networkd-dispatcher
 ```
 
 ```bash
+systemctl status networkd-dispatcher --no-pager
+```
+
+```bash
 networkctl reconfigure end0
+```
+
+```bash
+journalctl -t tailscale-subnet-router -n 20 --no-pager
 ```
 
 ```bash
@@ -144,7 +163,15 @@ systemctl start ethtool-end0.service
 ```
 
 ```bash
+systemctl status ethtool-end0.service --no-pager
+```
+
+```bash
 ethtool -k end0 | grep udp
+```
+
+```bash
+systemctl status tailscaled --no-pager
 ```
 
 ```bash
