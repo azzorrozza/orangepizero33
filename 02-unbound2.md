@@ -2,24 +2,44 @@
 
 Este guia configura a OrangePi Zero 3 para utilizar o **Unbound** como servidor DNS recursivo local, com **cache**, **DNSSEC** e integração correta com o **systemd-resolved**.
 
-O objetivo desta configuração é servir como base para a instalação posterior do **Pi-hole em Docker**.
+Diferentemente da configuração tradicional, o Unbound será executado na **porta 5335**, deixando a **porta 53 livre** para a futura instalação do **Pi-hole**.
 
-Nesta arquitetura:
+Ao final deste guia:
+
+- O sistema operacional utilizará o Unbound através do `systemd-resolved`;
+- O Unbound fará resolução recursiva diretamente na Internet;
+- A validação **DNSSEC** estará habilitada;
+- A porta **53 permanecerá livre** para o Pi-hole.
+
+---
+
+# Arquitetura
 
 ```
-Clientes
-     │
-     ▼
-Pi-hole (Docker :53)
-     │
-     ▼
-Unbound (Host :5335)
-     │
-     ▼
-Root DNS Servers
-```
+                 Clientes LAN (futuro)
+                         │
+                         ▼
+                  Pi-hole (53)
+                         │
+                127.0.0.1#5335
+                         │
+                         ▼
+               Unbound Recursivo (5335)
+                         │
+                         ▼
+                 Root DNS Servers
 
-O Unbound permanece instalado diretamente no sistema operacional, enquanto o Pi-hole será executado em um contêiner Docker utilizando a porta 53.
+
+Sistema Operacional
+        │
+        ▼
+systemd-resolved
+        │
+DNS=127.0.0.1:5335
+        │
+        ▼
+ Unbound (5335)
+```
 
 ---
 
@@ -28,14 +48,18 @@ O Unbound permanece instalado diretamente no sistema operacional, enquanto o Pi-
 > **Importante (Debian 13 / Armbian Trixie):**
 >
 > Além do Unbound, instale também o pacote **dns-root-data**. Ele fornece o arquivo `/usr/share/dns/root.key`, utilizado pelo helper do Debian para atualizar automaticamente a Trust Anchor durante o boot.
->
-> Sem esse pacote o serviço funciona normalmente, porém o `ExecStartPre=root_trust_anchor_update` termina com `status=1/FAILURE`.
 
 Instalação:
 
 ```bash
 apt update
-apt install -y unbound unbound-anchor dns-root-data dnsutils libnss-resolve
+
+apt install -y \
+    unbound \
+    unbound-anchor \
+    dns-root-data \
+    dnsutils \
+    libnss-resolve
 ```
 
 Habilitar o serviço:
@@ -48,9 +72,7 @@ systemctl enable unbound
 
 # 2. Configurar o systemd-resolved
 
-O **systemd-resolved** continuará sendo utilizado apenas para gerenciamento da resolução do sistema.
-
-Como o Pi-hole utilizará posteriormente a porta **53**, o DNS Stub Listener deve ser desabilitado.
+Desabilite apenas o **DNS Stub Listener**, mantendo o serviço ativo.
 
 Editar:
 
@@ -58,11 +80,11 @@ Editar:
 nano /etc/systemd/resolved.conf
 ```
 
-Conteúdo:
+Adicionar ou alterar:
 
 ```ini
 [Resolve]
-DNS=1.1.1.1 9.9.9.9
+DNS=127.0.0.1:5335
 DNSStubListener=no
 ```
 
@@ -78,23 +100,17 @@ Verificar:
 resolvectl status
 ```
 
-Deverá aparecer algo semelhante a:
+O servidor DNS deverá aparecer como:
 
 ```
-DNS Servers: 1.1.1.1 9.9.9.9
+127.0.0.1:5335
 ```
-
-> **Por que utilizar Cloudflare e Quad9?**
->
-> Durante a instalação do Docker e dos containers, o host precisa resolver nomes como `registry-1.docker.io`.
->
-> Se o sistema apontar para si mesmo (127.0.0.1) antes do Pi-hole existir, o Docker poderá ficar sem resolução de nomes e não conseguirá baixar imagens.
 
 ---
 
 # 3. Configurar o Unbound
 
-Editar:
+Criar o arquivo:
 
 ```bash
 nano /etc/unbound/unbound.conf.d/recursive.conf
@@ -106,8 +122,8 @@ Conteúdo:
 server:
     module-config: "validator iterator"
 
-    interface: 127.0.0.1
-    interface: ::1
+    interface: 0.0.0.0
+    interface: ::0
 
     port: 5335
 
@@ -154,19 +170,19 @@ server:
 
     access-control: 127.0.0.0/8 allow
     access-control: ::1 allow
+    access-control: 192.168.1.0/24 allow
+    access-control: 100.64.0.0/10 allow
 
     verbosity: 1
 ```
 
-> O Unbound ficará acessível apenas localmente (`127.0.0.1:5335`).
->
-> Posteriormente o Pi-hole será o único cliente do Unbound.
+> **Altere a rede `192.168.1.0/24` para a subnet da sua LAN.**
 
 ---
 
 # 4. Inicializar a Trust Anchor (DNSSEC)
 
-Criar diretório:
+Criar o diretório:
 
 ```bash
 mkdir -p /var/lib/unbound
@@ -178,10 +194,11 @@ Gerar a Trust Anchor:
 unbound-anchor -a /var/lib/unbound/root.key
 ```
 
-Permissões:
+Corrigir permissões:
 
 ```bash
 chown unbound:unbound /var/lib/unbound/root.key
+
 chmod 644 /var/lib/unbound/root.key
 ```
 
@@ -194,7 +211,7 @@ ls -l /var/lib/unbound/root.key
 Resultado esperado:
 
 ```text
--rw-r--r-- 1 unbound unbound ...
+-rw-r--r-- 1 unbound unbound ... /var/lib/unbound/root.key
 ```
 
 ---
@@ -205,18 +222,21 @@ Resultado esperado:
 unbound-checkconf
 ```
 
-Verificar também:
+Verificar a interface:
 
 ```bash
 unbound-checkconf -o interface
+```
+
+Verificar a porta:
+
+```bash
 unbound-checkconf -o port
 ```
 
 Resultado esperado:
 
-```
-127.0.0.1
-::1
+```text
 5335
 ```
 
@@ -236,7 +256,7 @@ systemctl status unbound --no-pager
 
 Resultado esperado:
 
-```
+```text
 Active: active (running)
 ```
 
@@ -248,28 +268,31 @@ Executar:
 
 ```bash
 /usr/libexec/unbound-helper root_trust_anchor_update
+
 echo $?
 ```
 
 Resultado esperado:
 
-```
+```text
 0
 ```
 
-Caso retorne `1`, confirme:
+Caso retorne:
+
+```text
+1
+```
+
+Verifique:
 
 ```bash
 dpkg -l dns-root-data
-```
 
-e
-
-```bash
 ls -l /usr/share/dns/root.key
 ```
 
-Se necessário:
+Caso necessário:
 
 ```bash
 apt install dns-root-data
@@ -279,71 +302,51 @@ apt install dns-root-data
 
 # 8. Verificar o resolv.conf
 
-O `/etc/resolv.conf` deve continuar sendo administrado pelo **systemd-resolved**.
+O arquivo deve continuar sendo gerenciado pelo `systemd-resolved`.
 
-Verifique:
+Verificar:
 
 ```bash
 ls -l /etc/resolv.conf
 ```
 
-Ele deverá apontar para:
-
-```
-/run/systemd/resolve/resolv.conf
-```
-
-ou
+Resultado esperado:
 
 ```
 /run/systemd/resolve/stub-resolv.conf
 ```
 
-Não substitua esse arquivo manualmente.
+ou
 
----
-
-# 9. Impedir que o DHCP sobrescreva o DNS
-
-Desabilite o recebimento automático de DNS via DHCP.
-
-```bash
-systemctl mask unbound-resolvconf.service
-systemctl reset-failed
+```
+/run/systemd/resolve/resolv.conf
 ```
 
-Editar:
-
-```bash
-nano /etc/netplan/*.yaml
-```
-
-Adicionar:
-
-```yaml
-dhcp4-overrides:
-  use-dns: false
-
-dhcp6-overrides:
-  use-dns: false
-```
-
-Aplicar:
-
-```bash
-netplan generate
-netplan apply
-```
+Não substitua esse link simbólico.
 
 ---
 
 # Testes
 
-## Testar o Unbound
+## Testar o próprio Unbound
 
 ```bash
 dig @127.0.0.1 -p 5335 openai.com
 ```
+
+---
+
+## Testar pela interface da LAN
+
+```bash
+dig @192.168.1.20 -p 5335 openai.com
+```
+
+(Substitua pelo IP da OrangePi.)
+
+A primeira consulta será mais lenta.
+
+As seguintes deverão utilizar o cache.
 
 ---
 
@@ -355,13 +358,13 @@ dig @127.0.0.1 -p 5335 dnssec-failed.org
 
 Resultado esperado:
 
-```
+```text
 status: SERVFAIL
 ```
 
 ---
 
-## Verificar a porta
+## Verificar a porta utilizada
 
 ```bash
 ss -lnptu | grep 5335
@@ -369,9 +372,11 @@ ss -lnptu | grep 5335
 
 Resultado esperado:
 
-```
-udp ... 127.0.0.1:5335
-tcp ... 127.0.0.1:5335
+```text
+udp   ... 0.0.0.0:5335
+udp   ... [::]:5335
+tcp   ... 0.0.0.0:5335
+tcp   ... [::]:5335
 ```
 
 Todos pertencentes ao processo **unbound**.
@@ -384,19 +389,29 @@ Todos pertencentes ao processo **unbound**.
 unbound-control stats_noreset
 ```
 
-Os contadores de cache deverão aumentar conforme o servidor for utilizado.
+Os contadores como:
+
+- cachehits
+- cachemiss
+- recursivereplies
+
+deverão aumentar conforme o servidor for utilizado.
 
 ---
 
-# Próximo passo
+# Preparação para o Pi-hole
 
-O próximo guia instalará o **Pi-hole em Docker**.
+Nenhuma alteração adicional será necessária no Unbound quando o Pi-hole for instalado.
 
-Ele ficará responsável por:
+Bastará configurar o Pi-hole para utilizar como servidor upstream:
 
-- publicar a porta **53** para a rede;
-- encaminhar todas as consultas para `127.0.0.1#5335`;
-- fornecer bloqueio de anúncios;
-- disponibilizar a interface web de administração.
+```
+127.0.0.1#5335
+```
 
-Como o host continuará utilizando DNS públicos (Cloudflare/Quad9) através do `systemd-resolved`, o Docker sempre conseguirá resolver nomes e baixar imagens, evitando o problema de dependência circular encontrado durante a instalação.
+Dessa forma:
+
+- o Pi-hole atenderá as consultas DNS na **porta 53**;
+- o Unbound continuará responsável pela resolução recursiva na **porta 5335**;
+- o sistema operacional continuará utilizando o Unbound através do `systemd-resolved`;
+- não será necessária qualquer reconfiguração do Unbound após a instalação do Pi-hole.
