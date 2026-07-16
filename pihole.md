@@ -193,6 +193,17 @@ Após algumas consultas:
 
 ```bash
 unbound-control stats_noreset | grep cache
+nano /etc/systemd/resolved.conf
+```
+
+```bash
+[Resolve]
+DNS=127.0.0.1
+DNSStubListener=no
+```
+
+```bash
+systemctl restart systemd-resolved
 ```
 
 Os valores de `cachehits` devem começar a aumentar, indicando que o Pi-hole está encaminhando corretamente as consultas para o Unbound.
