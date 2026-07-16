@@ -217,6 +217,10 @@ cat /etc/netplan/*.yaml
 ```
 
 ```bash
+chmod 600 /etc/netplan/*.yaml
+```
+
+```bash
 netplan generate
 ```
 
