@@ -1,6 +1,8 @@
 # OrangePi Zero 3 - Pi-hole (Docker) + Unbound
 
-Este guia instala o **Pi-hole** em Docker utilizando uma **rede Docker compartilhada** (`services`) e configurando o **Unbound** (já instalado no host) como servidor DNS upstream.
+Este guia instala o **Pi-hole** em Docker utilizando **`network_mode: host`** e configurando o **Unbound** (instalado no host) como servidor DNS upstream.
+
+Como o Pi-hole utiliza a pilha de rede do próprio host, ele escuta diretamente nas portas da OrangePi, simplificando a configuração e eliminando a necessidade de mapeamento de portas ou redes Docker dedicadas.
 
 Arquitetura final:
 
@@ -8,15 +10,15 @@ Arquitetura final:
 Clientes
     │
     ▼
-Pi-hole (Docker)
-porta 53
+OrangePi
     │
-    ▼
-Unbound (Host)
-127.0.0.1:5335
-    │
-    ▼
-Root DNS Servers
+    ├── Pi-hole (Docker - Host Network)
+    │        │
+    │        ▼
+    └── Unbound (Host)
+             │
+             ▼
+     Root DNS Servers
 ```
 
 ---
@@ -47,15 +49,9 @@ services:
 
     hostname: orangepi
 
+    network_mode: host
+
     restart: unless-stopped
-
-    networks:
-      - services
-
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "80:80/tcp"
 
     volumes:
       - ./etc-pihole:/etc/pihole
@@ -64,18 +60,11 @@ services:
     environment:
       TZ: America/Sao_Paulo
 
-      FTLCONF_dns_upstreams: "host.docker.internal#5335"
+      FTLCONF_dns_upstreams: "127.0.0.1#5335"
 
       FTLCONF_dns_listeningMode: "all"
 
       FTLCONF_webserver_api_password: "ALTERE_A_SENHA"
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-networks:
-  services:
-    external: true
 ```
 
 ---
@@ -127,7 +116,7 @@ docker exec -it pihole bash
 Testar:
 
 ```bash
-dig @host.docker.internal -p 5335 openai.com
+dig @127.0.0.1 -p 5335 openai.com
 ```
 
 Deve retornar normalmente.
@@ -168,7 +157,7 @@ Verificar containers:
 docker ps
 ```
 
-Verificar portas:
+Verificar portas utilizadas:
 
 ```bash
 ss -lnptu | grep -E ':53|:80|:5335'
@@ -179,6 +168,8 @@ Resultado esperado:
 - Porta **53** → Pi-hole
 - Porta **80** → Pi-hole
 - Porta **5335** → Unbound
+
+Como o Pi-hole está utilizando `network_mode: host`, ele escuta diretamente nas portas da OrangePi.
 
 ---
 
@@ -202,4 +193,13 @@ Após algumas consultas:
 unbound-control stats_noreset | grep cache
 ```
 
-Os valores de `cachehits` devem começar a aumentar, indicando que o Pi-hole está encaminhando as consultas para o Unbound corretamente.
+Os valores de `cachehits` devem começar a aumentar, indicando que o Pi-hole está encaminhando corretamente as consultas para o Unbound.
+
+---
+
+# Observações
+
+- O Pi-hole utiliza a pilha de rede do host (`network_mode: host`).
+- O Unbound permanece executando no host, escutando na porta **5335**.
+- A porta **53** é utilizada exclusivamente pelo Pi-hole.
+- A rede Docker `services` continua disponível para os demais containers (Portainer, Homepage, MySpeed, etc.), mas não é utilizada pelo Pi-hole.
