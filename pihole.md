@@ -64,7 +64,9 @@ services:
 
       FTLCONF_dns_listeningMode: "all"
 
-      FTLCONF_webserver_api_password: "ALTERE_A_SENHA"
+      FTLCONF_webserver_port: "80"
+
+      FTLCONF_webserver_api_password: "090611"
 ```
 
 ---
