@@ -173,12 +173,6 @@ nano /etc/netplan/*.yaml
 ```
 
 ```yaml
-# Added by Armbian
-#
-# Reference: https://netplan.readthedocs.io/en/stable/netplan-yaml/
-#
-# Let systemd-networkd manage all Ethernet devices on this system, but be configured by Netplan.
-
 network:
   version: 2
   renderer: networkd
@@ -216,6 +210,10 @@ network:
       dhcp6-overrides:
         use-dns: false
       ipv6-privacy: yes
+```
+
+```bash
+cat /etc/netplan/*.yaml
 ```
 
 ```bash
