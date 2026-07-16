@@ -150,6 +150,9 @@ echo $?
 
 ```bash
 systemctl mask unbound-resolvconf.service
+```
+
+```bash
 systemctl reset-failed
 ```
 
