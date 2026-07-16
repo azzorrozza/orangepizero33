@@ -1,9 +1,8 @@
-
 ---
 
 ```bash
 for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do
-    apt remove -y $pkg
+    apt remove -y "$pkg"
 done
 ```
 
@@ -42,11 +41,11 @@ apt policy docker-ce
 
 ```bash
 apt install -y \
-docker-ce \
-docker-ce-cli \
-containerd.io \
-docker-buildx-plugin \
-docker-compose-plugin
+    docker-ce \
+    docker-ce-cli \
+    containerd.io \
+    docker-buildx-plugin \
+    docker-compose-plugin
 ```
 
 ```bash
@@ -63,6 +62,10 @@ systemctl enable docker
 
 ```bash
 systemctl start docker
+```
+
+```bash
+systemctl status docker --no-pager
 ```
 
 ```bash
@@ -145,38 +148,35 @@ docker logs portainer
 ```
 
 ```bash
-docker --version
-```
-
-```bash
-docker compose version
-```
-
-```bash
-systemctl status docker --no-pager
-```
-
-```bash
 docker run hello-world
 ```
 
 ```bash
-docker --version
-docker compose version
 docker info
+```
+
+```bash
 docker ps -a
+```
+
+```bash
 docker compose ls
+```
+
+```bash
 docker network ls
+```
+
+```bash
 systemctl is-enabled docker
+```
+
+```bash
 systemctl is-active docker
 ```
 
 ```bash
 docker logs portainer
-```
-
-```bash
-docker compose ls
 ```
 
 ```bash
@@ -186,3 +186,5 @@ docker inspect portainer
 ```bash
 tree /opt/docker
 ```
+
+---
