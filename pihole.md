@@ -1,175 +1,205 @@
-# Arquitetura Final do Projeto
+# OrangePi Zero 3 - Pi-hole (Docker) + Unbound
 
-Após diversos testes durante a implantação da OrangePi Zero 3, esta passou a ser a arquitetura recomendada para o projeto.
+Este guia instala o **Pi-hole** em Docker utilizando uma **rede Docker compartilhada** (`services`) e configurando o **Unbound** (já instalado no host) como servidor DNS upstream.
 
-```
-                    Internet
-                        │
-                        ▼
-                 Root DNS Servers
-                        │
-                        ▼
-                Unbound (Host Linux)
-                  127.0.0.1:5335
-                        │
-                        ▼
-         Pi-hole (Docker - network_mode: host)
-                  127.0.0.1:53
-                        │
-        ┌───────────────┴───────────────┐
-        ▼                               ▼
-     LAN Clients                 Tailscale Clients
-```
-
-## Por que esta arquitetura?
-
-Durante a implementação foram avaliadas duas possibilidades:
-
-### Opção 1 — Docker Bridge
+Arquitetura final:
 
 ```
 Clientes
     │
     ▼
-Pi-hole (Docker Bridge)
+Pi-hole (Docker)
+porta 53
     │
     ▼
-172.18.0.1:5335
+Unbound (Host)
+127.0.0.1:5335
     │
     ▼
-Unbound
+Root DNS Servers
 ```
-
-Embora funcional, essa abordagem apresentou alguns inconvenientes:
-
-- necessidade de publicar a porta 53 utilizando `docker-proxy`;
-- o host não conseguia consultar corretamente o próprio Pi-hole em `127.0.0.1:53`;
-- durante a instalação do Pi-hole o Docker ficou sem resolução DNS para baixar imagens;
-- dependência do endereço da bridge Docker (`172.18.0.1`);
-- maior complexidade na documentação e na manutenção.
 
 ---
 
-### Opção 2 — Host Network (Recomendada)
+# 1. Criar diretório
 
-```
-Clientes
-    │
-    ▼
-Pi-hole (network_mode: host)
-    │
-    ▼
-127.0.0.1:5335
-    │
-    ▼
-Unbound
+```bash
+mkdir -p /opt/docker/pihole
+mkdir -p /opt/docker/pihole/etc-pihole
+mkdir -p /opt/docker/pihole/etc-dnsmasq.d
 ```
 
-Esta arquitetura elimina completamente os problemas encontrados durante os testes.
+---
 
-## Vantagens
+# 2. Criar o docker-compose.yml
 
-- Não utiliza `docker-proxy` para DNS.
-- O Pi-hole escuta diretamente na porta 53 do host.
-- O Unbound permanece isolado na porta 5335.
-- O próprio sistema operacional pode utilizar o Pi-hole normalmente.
-- Não depende do gateway da bridge Docker (`172.18.0.1`).
-- Menor quantidade de NAT e redirecionamentos.
-- Configuração mais simples.
-- Mais fácil de manter.
-- Menor possibilidade de loops de DNS.
-- Fluxo de resolução mais previsível.
-
-## Fluxo de resolução
-
-### Sistema Operacional
-
-```
-Aplicação
-    │
-    ▼
-systemd-resolved
-    │
-    ▼
-127.0.0.1:53
-    │
-    ▼
-Pi-hole
-    │
-    ▼
-127.0.0.1:5335
-    │
-    ▼
-Unbound
-    │
-    ▼
-Root DNS
+```bash
+nano /opt/docker/pihole/docker-compose.yml
 ```
 
-### Clientes da rede
+Conteúdo:
 
-```
-Cliente
-    │
-    ▼
-Pi-hole
-    │
-    ▼
-Unbound
-    │
-    ▼
-Root DNS
-```
+```yaml
+services:
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
 
-## Ordem recomendada dos guias
+    hostname: orangepi
 
-1. 00 - Post Install
-2. 01 - Tailscale
-3. 02 - Docker
-4. 03 - Unbound (porta 5335)
-5. 04 - Pi-hole (network_mode: host)
+    restart: unless-stopped
 
-Dessa forma o Unbound já nasce preparado para atender o Pi-hole, evitando qualquer alteração posterior na configuração.
+    networks:
+      - services
 
-## Configuração adotada
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp"
 
-### Unbound
+    volumes:
+      - ./etc-pihole:/etc/pihole
+      - ./etc-dnsmasq.d:/etc/dnsmasq.d
 
-- Executa diretamente no host.
-- Porta **5335**.
-- DNSSEC habilitado.
-- Cache habilitado.
-- Servidor recursivo completo.
+    environment:
+      TZ: America/Sao_Paulo
 
-### Pi-hole
+      FTLCONF_dns_upstreams: "host.docker.internal#5335"
 
-- Executa em Docker.
-- `network_mode: host`
-- Porta **53** do host.
-- Upstream DNS:
+      FTLCONF_dns_listeningMode: "all"
 
-```
-127.0.0.1#5335
+      FTLCONF_webserver_api_password: "ALTERE_A_SENHA"
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  services:
+    external: true
 ```
 
-### systemd-resolved
+---
 
-Permanece ativo apenas como resolvedor local do sistema.
+# 3. Iniciar o Pi-hole
+
+```bash
+cd /opt/docker/pihole
+
+docker compose pull
+
+docker compose up -d
+```
+
+---
+
+# 4. Verificar o container
+
+```bash
+docker ps
+```
+
+Resultado esperado:
 
 ```
-[Resolve]
-DNS=127.0.0.1
-DNSStubListener=no
+pihole
 ```
 
-## Resultado final
+---
 
-Todo o ambiente passa a utilizar exatamente o mesmo fluxo de resolução:
+# 5. Verificar logs
 
-- Sistema operacional
-- Docker
-- Pi-hole
-- Clientes da LAN
-- Clientes via Tailscale
+```bash
+docker logs -f pihole
+```
 
-Todos resolvem nomes através do Pi-hole, que utiliza o Unbound como resolvedor recursivo local, sem depender de servidores DNS públicos como Cloudflare, Google ou Quad9.
+Não deverá haver erros relacionados ao DNS.
+
+---
+
+# 6. Confirmar acesso ao Unbound
+
+Entrar no container:
+
+```bash
+docker exec -it pihole bash
+```
+
+Testar:
+
+```bash
+dig @host.docker.internal -p 5335 openai.com
+```
+
+Deve retornar normalmente.
+
+Sair:
+
+```bash
+exit
+```
+
+---
+
+# 7. Acessar a interface
+
+```
+http://IP_DA_ORANGEPI/admin
+```
+
+Exemplo:
+
+```
+http://192.168.1.10/admin
+```
+
+Entrar utilizando a senha configurada em:
+
+```
+FTLCONF_webserver_api_password
+```
+
+---
+
+# 8. Verificações
+
+Verificar containers:
+
+```bash
+docker ps
+```
+
+Verificar portas:
+
+```bash
+ss -lnptu | grep -E ':53|:80|:5335'
+```
+
+Resultado esperado:
+
+- Porta **53** → Pi-hole
+- Porta **80** → Pi-hole
+- Porta **5335** → Unbound
+
+---
+
+# 9. Testes
+
+Consultar diretamente o Pi-hole:
+
+```bash
+dig @127.0.0.1 openai.com
+```
+
+Consultar pela LAN:
+
+```bash
+dig @192.168.1.10 openai.com
+```
+
+Após algumas consultas:
+
+```bash
+unbound-control stats_noreset | grep cache
+```
+
+Os valores de `cachehits` devem começar a aumentar, indicando que o Pi-hole está encaminhando as consultas para o Unbound corretamente.
