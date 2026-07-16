@@ -15,6 +15,10 @@ systemctl enable unbound
 ```
 
 ```bash
+systemctl is-enabled unbound
+```
+
+```bash
 nano /etc/systemd/resolved.conf
 ```
 
@@ -30,6 +34,10 @@ cat /etc/systemd/resolved.conf
 
 ```bash
 systemctl restart systemd-resolved
+```
+
+```bash
+systemctl status systemd-resolved --no-pager
 ```
 
 ```bash
@@ -136,6 +144,10 @@ unbound-checkconf -o port
 
 ```bash
 systemctl restart unbound
+```
+
+```bash
+journalctl -u unbound -n 20 --no-pager
 ```
 
 ```bash
