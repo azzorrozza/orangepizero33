@@ -133,6 +133,10 @@ docker compose up -d
 ```
 
 ```bash
+docker compose ps
+```
+
+```bash
 docker ps
 ```
 
@@ -165,10 +169,6 @@ docker compose ls
 docker network ls
 systemctl is-enabled docker
 systemctl is-active docker
-```
-
-```bash
-docker ps
 ```
 
 ```bash
