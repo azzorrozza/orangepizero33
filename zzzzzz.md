@@ -66,7 +66,7 @@ docker ps
 ```
 
 ```bash
-docker logs -f pihole
+docker logs --tail=100 pihole
 ```
 
 ```bash
