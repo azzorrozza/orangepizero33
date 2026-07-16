@@ -54,10 +54,10 @@ set -euo pipefail
 
 LOGGER_TAG="tailscale-subnet-router"
 
-# Executa apenas para a interface Ethernet principal
+# Run only for the primary Ethernet interface
 [ "$IFACE" != "end0" ] && exit 0
 
-# Aguarda o tailscaled ficar ativo (máximo 30 segundos)
+# Wait until tailscaled is active (up to 30 seconds)
 for i in {1..30}; do
     systemctl is-active --quiet tailscaled && break
     sleep 1
@@ -65,23 +65,23 @@ done
 
 systemctl is-active --quiet tailscaled || exit 0
 
-# Descobre automaticamente a subnet IPv4 da interface
+# Detect the IPv4 subnet assigned to the interface
 ROUTE=$(ip -4 route show dev "$IFACE" proto kernel | awk '{print $1}')
 
 [ -z "$ROUTE" ] && exit 0
 
-logger -t "$LOGGER_TAG" "Subnet detectada: $ROUTE"
+logger -t "$LOGGER_TAG" "Detected subnet: $ROUTE"
 
-# Rotas atualmente anunciadas pelo Tailscale
+# Currently advertised Tailscale routes
 CURRENT=$(tailscale debug prefs | jq -r '.AdvertiseRoutes // [] | .[]' 2>/dev/null)
 
-# Se a subnet já estiver anunciada, não altera a configuração
+# Skip if the subnet is already being advertised
 if printf '%s\n' "$CURRENT" | grep -qxF "$ROUTE"; then
-    logger -t "$LOGGER_TAG" "Rota $ROUTE já anunciada."
+    logger -t "$LOGGER_TAG" "Route $ROUTE is already advertised."
     exit 0
 fi
 
-logger -t "$LOGGER_TAG" "Atualizando rota anunciada para $ROUTE"
+logger -t "$LOGGER_TAG" "Updating advertised route to $ROUTE"
 
 tailscale set \
     --advertise-routes="$ROUTE" \
