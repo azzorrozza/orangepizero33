@@ -1,4 +1,3 @@
-
 ---
 
 ```bash
@@ -169,37 +168,10 @@ systemctl reset-failed
 ```
 
 ```bash
-ls -l /etc/resolv.conf
-```
-
-```bash
-dig @127.0.0.1 -p 5335 openai.com
-```
-
-```bash
-dig @192.168.1.20 -p 5335 openai.com
-```
-
-```bash
-dig @127.0.0.1 -p 5335 dnssec-failed.org
-```
-
-```bash
-ss -lnptu | grep 5335
-```
-
-```bash
-unbound-control stats_noreset
-```
----
-
-```
-systemctl mask unbound-resolvconf.service
-systemctl reset-failed
 nano /etc/netplan/*.yaml
 ```
 
-```
+```yaml
 # Added by Armbian
 #
 # Reference: https://netplan.readthedocs.io/en/stable/netplan-yaml/
@@ -245,10 +217,32 @@ network:
       ipv6-privacy: yes
 ```
 
-```
+```bash
 netplan generate
 ```
 
-```
+```bash
 netplan apply
 ```
+
+```bash
+ls -l /etc/resolv.conf
+```
+
+```bash
+dig @127.0.0.1 -p 5335 openai.com
+```
+
+```bash
+dig @192.168.1.20 -p 5335 openai.com
+```
+
+```bash
+dig @127.0.0.1 -p 5335 dnssec-failed.org
+```
+
+```bash
+ss -lnptu | grep 5335
+```
+
+---
