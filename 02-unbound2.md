@@ -272,30 +272,11 @@ Executar:
 echo $?
 ```
 
-Resultado esperado:
-
-```text
-0
-```
-
-Caso retorne:
-
-```text
-1
-```
-
 Verifique:
 
 ```bash
-dpkg -l dns-root-data
-
-ls -l /usr/share/dns/root.key
-```
-
-Caso necessário:
-
-```bash
-apt install dns-root-data
+systemctl mask unbound-resolvconf.service
+systemctl reset-failed
 ```
 
 ---
