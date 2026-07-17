@@ -1,42 +1,57 @@
 # Auditoria Completa - OrangePi Zero 3
 
-## Objetivo
+Este documento realiza uma auditoria completa do ambiente após a instalação de todos os componentes.
 
-Executar uma validação completa de:
+A auditoria valida automaticamente:
 
-- Sistema
+- Sistema Operacional
 - Rede
 - Tailscale
+- Exit Node
 - Subnet Router
 - UDP GRO
 - systemd-resolved
 - Netplan
 - Unbound
 - DNSSEC
-- Docker
+- Docker CE
 - Portainer
 - Pi-hole
 - MySpeed
 - Firewall
+- Portas
 - Recursos do sistema
+
+A saída foi projetada para ser compacta, facilitando o envio em tickets ou para análise.
 
 ---
 
-## Como executar
+# Executar auditoria
 
-Execute tudo de uma vez:
+Execute todo o bloco abaixo.
 
 ```bash
 bash <<'EOF'
 #!/usr/bin/env bash
 
 FAIL=0
+VERBOSE=0
 
-ok()   { echo "[ OK ] $1"; }
-warn() { echo "[FAIL] $1"; FAIL=1; }
+[[ "$1" == "--verbose" ]] && VERBOSE=1
+
+ok() {
+    [ "$VERBOSE" = "1" ] && echo "[ OK ] $1"
+}
+
+fail() {
+    echo "[FAIL] $1"
+    FAIL=1
+}
 
 echo
-echo "========== OrangePi Auditor =========="
+echo "OrangePi Auditor v1.0"
+echo "Host : $(hostname)"
+echo "Data : $(date)"
 echo
 
 ########################################
@@ -44,9 +59,8 @@ echo
 ########################################
 
 systemctl --failed --no-legend | grep -q .
-
 if [ $? -eq 0 ]; then
-    warn "Existem serviços em falha"
+    fail "Existem serviços em falha"
 else
     ok "Nenhum serviço em falha"
 fi
@@ -56,101 +70,84 @@ fi
 ########################################
 
 [ "$(sysctl -n net.ipv4.ip_forward)" = "1" ] \
-&& ok "IPv4 Forward" \
-|| warn "IPv4 Forward"
+|| fail "IPv4 Forward"
 
 [ "$(sysctl -n net.ipv6.conf.all.forwarding)" = "1" ] \
-&& ok "IPv6 Forward" \
-|| warn "IPv6 Forward"
+|| fail "IPv6 Forward"
 
 ########################################
 # Tailscale
 ########################################
 
 systemctl is-active tailscaled >/dev/null \
-&& ok "tailscaled ativo" \
-|| warn "tailscaled"
+|| fail "tailscaled"
 
 tailscale status --self | grep -qi "offers exit node" \
-&& ok "Exit Node anunciado" \
-|| warn "Exit Node"
+|| fail "Exit Node"
 
 tailscale ip >/dev/null \
-&& ok "Tailscale IP" \
-|| warn "Tailscale IP"
+|| fail "Tailscale IP"
 
 ########################################
 # UDP GRO
 ########################################
 
 ethtool -k end0 | grep -q "generic-receive-offload: on" \
-&& ok "UDP GRO" \
-|| warn "UDP GRO"
+|| fail "UDP GRO"
 
 ########################################
 # networkd-dispatcher
 ########################################
 
 systemctl is-active networkd-dispatcher >/dev/null \
-&& ok "networkd-dispatcher" \
-|| warn "networkd-dispatcher"
+|| fail "networkd-dispatcher"
 
 ########################################
 # systemd-resolved
 ########################################
 
 grep -q '^DNS=127.0.0.1' /etc/systemd/resolved.conf \
-&& ok "resolved.conf DNS" \
-|| warn "resolved.conf DNS"
+|| fail "resolved.conf DNS"
 
 grep -q '^DNSStubListener=no' /etc/systemd/resolved.conf \
-&& ok "DNSStubListener" \
-|| warn "DNSStubListener"
+|| fail "DNSStubListener"
 
 grep -q "nameserver 127.0.0.1" /etc/resolv.conf \
-&& ok "resolv.conf" \
-|| warn "resolv.conf"
+|| fail "resolv.conf"
 
 ########################################
 # Netplan
 ########################################
 
 netplan get >/dev/null 2>&1 \
-&& ok "Netplan" \
-|| warn "Netplan"
+|| fail "Netplan"
 
 ########################################
 # Unbound
 ########################################
 
 systemctl is-active unbound >/dev/null \
-&& ok "Unbound ativo" \
-|| warn "Unbound"
+|| fail "Unbound"
 
 unbound-checkconf >/dev/null 2>&1 \
-&& ok "Configuração Unbound" \
-|| warn "Configuração Unbound"
+|| fail "Configuração Unbound"
 
 dig @127.0.0.1 -p 5335 openai.com +short | grep -q . \
-&& ok "Resolução Unbound" \
-|| warn "Resolução Unbound"
+|| fail "Unbound DNS"
 
 dig @127.0.0.1 -p 5335 dnssec-failed.org \
 | grep -q SERVFAIL \
-&& ok "DNSSEC" \
-|| warn "DNSSEC"
+|| fail "DNSSEC"
 
 ########################################
 # Docker
 ########################################
 
 systemctl is-active docker >/dev/null \
-&& ok "Docker ativo" \
-|| warn "Docker"
+|| fail "Docker"
 
 docker compose version >/dev/null 2>&1 \
-&& ok "Docker Compose" \
-|| warn "Docker Compose"
+|| fail "Docker Compose"
 
 ########################################
 # Portainer
@@ -158,8 +155,7 @@ docker compose version >/dev/null 2>&1 \
 
 docker ps --format '{{.Names}} {{.Status}}' \
 | grep -q '^portainer .*Up' \
-&& ok "Portainer" \
-|| warn "Portainer"
+|| fail "Portainer"
 
 ########################################
 # Pi-hole
@@ -167,37 +163,31 @@ docker ps --format '{{.Names}} {{.Status}}' \
 
 docker ps --format '{{.Names}} {{.Status}}' \
 | grep -q '^pihole .*healthy' \
-&& ok "Pi-hole Healthy" \
-|| warn "Pi-hole Healthy"
+|| fail "Pi-hole Healthy"
 
 docker exec pihole pihole status >/dev/null 2>&1 \
-&& ok "Pi-hole Status" \
-|| warn "Pi-hole Status"
+|| fail "Pi-hole Status"
 
 docker exec pihole pihole-FTL --config dns.upstreams \
-| grep -q "127.0.0.1#5335" \
-&& ok "Upstream Pi-hole" \
-|| warn "Upstream Pi-hole"
+| grep -q '127.0.0.1#5335' \
+|| fail "Pi-hole Upstream"
 
 docker exec pihole test -f /etc/pihole/gravity.db \
-&& ok "Gravity DB" \
-|| warn "Gravity DB"
+|| fail "Gravity DB"
 
 dig @127.0.0.1 openai.com +short | grep -q . \
-&& ok "DNS localhost"
+|| fail "DNS localhost"
 
 dig @"$(hostname -I | awk '{print $1}')" openai.com +short | grep -q . \
-&& ok "DNS LAN" \
-|| warn "DNS LAN"
+|| fail "DNS LAN"
 
 ########################################
-# Cache Unbound
+# Cache
 ########################################
 
 unbound-control stats_noreset 2>/dev/null \
 | grep -q cache \
-&& ok "Cache Unbound" \
-|| warn "Cache Unbound"
+|| fail "Cache Unbound"
 
 ########################################
 # MySpeed
@@ -205,113 +195,88 @@ unbound-control stats_noreset 2>/dev/null \
 
 docker ps --format '{{.Names}} {{.Status}}' \
 | grep -q '^myspeed .*Up' \
-&& ok "MySpeed" \
-|| warn "MySpeed"
+|| fail "MySpeed"
 
 ########################################
 # Firewall
 ########################################
 
 iptables -L >/dev/null 2>&1 \
-&& ok "iptables" \
-|| warn "iptables"
+|| fail "iptables"
 
 ip6tables -L >/dev/null 2>&1 \
-&& ok "ip6tables" \
-|| warn "ip6tables"
+|| fail "ip6tables"
 
 ########################################
 # Portas
 ########################################
 
 ss -lnptu | grep -q ':53 ' \
-&& ok "Porta 53" \
-|| warn "Porta 53"
+|| fail "Porta 53"
 
 ss -lnptu | grep -q ':5335 ' \
-&& ok "Porta 5335" \
-|| warn "Porta 5335"
+|| fail "Porta 5335"
 
 ss -lnptu | grep -q ':9443 ' \
-&& ok "Porta 9443" \
-|| warn "Porta 9443"
+|| fail "Porta 9443"
 
 ########################################
-# Recursos
+# Disco
 ########################################
 
-df / | awk 'NR==2{if($5+0<90) exit 0; else exit 1}'
+df / | awk 'NR==2 {exit ($5+0<90)?0:1}'
 
-if [ $? -eq 0 ]; then
-    ok "Espaço em disco"
-else
-    warn "Disco quase cheio"
+if [ $? -ne 0 ]; then
+    fail "Disco acima de 90%"
 fi
 
+########################################
+# Resultado
 ########################################
 
 echo
-echo "====================================="
+echo "================================"
 
-if [ $FAIL -eq 0 ]; then
-    echo
+if [ "$FAIL" = "0" ]; then
     echo "status: NOERROR"
 else
-    echo
     echo "status: ERROR"
 fi
 
-echo "====================================="
+echo "================================"
 EOF
 ```
 
 ---
 
-## Resultado esperado
+# Saída esperada
 
-Se tudo estiver correto, o retorno será semelhante a:
+Se todo o ambiente estiver correto:
 
 ```text
-[ OK ] Nenhum serviço em falha
-[ OK ] IPv4 Forward
-[ OK ] IPv6 Forward
-[ OK ] tailscaled ativo
-[ OK ] Exit Node anunciado
-[ OK ] UDP GRO
-[ OK ] networkd-dispatcher
-[ OK ] resolved.conf DNS
-[ OK ] DNSStubListener
-[ OK ] resolv.conf
-[ OK ] Netplan
-[ OK ] Unbound ativo
-[ OK ] Configuração Unbound
-[ OK ] Resolução Unbound
-[ OK ] DNSSEC
-[ OK ] Docker ativo
-[ OK ] Docker Compose
-[ OK ] Portainer
-[ OK ] Pi-hole Healthy
-[ OK ] Pi-hole Status
-[ OK ] Upstream Pi-hole
-[ OK ] Gravity DB
-[ OK ] DNS localhost
-[ OK ] DNS LAN
-[ OK ] Cache Unbound
-[ OK ] MySpeed
-[ OK ] iptables
-[ OK ] ip6tables
-[ OK ] Porta 53
-[ OK ] Porta 5335
-[ OK ] Porta 9443
-[ OK ] Espaço em disco
+OrangePi Auditor v1.0
+Host : orangepizero3
+Data : Fri Jul 17 ...
 
+================================
 status: NOERROR
+================================
 ```
 
-Caso exista qualquer problema, **apenas as linhas com `[FAIL]` aparecerão**, seguidas de:
+Caso exista qualquer problema:
 
 ```text
+OrangePi Auditor v1.0
+Host : orangepizero3
+Data : Fri Jul 17 ...
+
+[FAIL] Gravity DB
+[FAIL] Pi-hole Healthy
+[FAIL] DNS LAN
+
+================================
 status: ERROR
+================================
 ```
 
-Assim você pode simplesmente copiar e colar toda a saída aqui que eu consigo identificar rapidamente qualquer inconsistência.
+Assim, basta copiar e colar a saída aqui para que a causa do problema seja identificada rapidamente.
