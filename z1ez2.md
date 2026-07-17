@@ -1,5 +1,9 @@
 # Auditoria - OrangePi Zero 3
-## Tailscale + Unbound
+## Validação Completa - Tailscale + Unbound
+
+Este documento realiza uma auditoria completa da configuração do OrangePi Zero 3 após a instalação do Tailscale (Exit Node + Subnet Router) e do Unbound.
+
+> **Observação:** Todos os comandos abaixo são apenas de leitura. Nenhuma configuração será alterada.
 
 ---
 
@@ -50,9 +54,9 @@ tailscale ip
 
 tailscale debug prefs
 
-tailscale netcheck
+tailscale metrics | head
 
-tailscale ping 100.100.100.100
+tailscale netcheck
 ```
 
 ---
@@ -100,6 +104,8 @@ journalctl -u networkd-dispatcher -n 100 --no-pager
 # UDP GRO
 
 ```bash
+ethtool --version
+
 systemctl status ethtool-end0.service --no-pager
 
 systemctl is-enabled ethtool-end0.service
@@ -121,6 +127,8 @@ systemctl status systemd-resolved --no-pager
 resolvectl status
 
 ls -l /etc/resolv.conf
+
+readlink -f /etc/resolv.conf
 
 cat /etc/resolv.conf
 ```
@@ -173,6 +181,8 @@ unbound-checkconf -o port
 ls -lah /var/lib/unbound/
 
 ls -l /var/lib/unbound/root.key
+
+stat /var/lib/unbound/root.key
 ```
 
 ---
@@ -185,16 +195,24 @@ ss -lnptu
 
 ---
 
-# DNS
+# DNS (Localhost)
 
 ```bash
 dig @127.0.0.1 -p 5335 openai.com
 
 dig @127.0.0.1 -p 5335 cloudflare.com
 
-dig @127.0.0.1 -p 5335 dnssec-failed.org
+dig @127.0.0.1 -p 5335 sigok.verteiltesysteme.net
 
-dig @192.168.1.99 -p 5335 openai.com
+dig @127.0.0.1 -p 5335 dnssec-failed.org
+```
+
+---
+
+# DNS (Rede Local)
+
+```bash
+dig @"$(hostname -I | awk '{print $1}')" -p 5335 openai.com
 ```
 
 ---
@@ -209,7 +227,7 @@ ip6tables -L -n -v
 
 ---
 
-# Logs do boot
+# Inicialização do sistema
 
 ```bash
 systemd-analyze blame
@@ -227,7 +245,7 @@ systemctl list-unit-files --state=enabled
 
 ---
 
-# Estado geral
+# Estado geral do sistema
 
 ```bash
 systemctl --failed
@@ -235,7 +253,7 @@ systemctl --failed
 
 ---
 
-# Uso de recursos
+# Utilização de recursos
 
 ```bash
 free -h
@@ -249,24 +267,23 @@ top -b -n1 | head -30
 
 ---
 
-# Para concluir a auditoria:
+# Resultado esperado
 
-```bash
-cat /etc/unbound/unbound.conf.d/recursive.conf
+Ao final da auditoria, espera-se encontrar:
 
-unbound-checkconf
-
-dig @127.0.0.1 -p 5335 openai.com
-
-dig @127.0.0.1 -p 5335 dnssec-failed.org
-
-dig @192.168.1.99 -p 5335 openai.com
-
-ss -lnptu
-
-iptables -L -n -v
-
-ip6tables -L -n -v
-
-systemctl --failed
-```
+- ✅ Sistema operacional atualizado e íntegro.
+- ✅ Interface de rede configurada corretamente.
+- ✅ IP Forward IPv4 e IPv6 habilitados.
+- ✅ Tailscale ativo como Exit Node e Subnet Router.
+- ✅ Rotas anunciadas corretamente.
+- ✅ UDP GRO habilitado.
+- ✅ networkd-dispatcher funcionando.
+- ✅ systemd-resolved utilizando o Unbound como resolvedor local.
+- ✅ Netplan impedindo o DHCP de sobrescrever o DNS.
+- ✅ Unbound ativo e sem erros de configuração.
+- ✅ DNSSEC validando corretamente (`dnssec-failed.org` retorna `SERVFAIL`).
+- ✅ Consultas DNS locais e pela rede respondendo corretamente.
+- ✅ Porta 5335 aberta para TCP e UDP.
+- ✅ Regras do Tailscale presentes no iptables/ip6tables.
+- ✅ Nenhum serviço com falha (`systemctl --failed`).
+- ✅ Uso de memória, disco e CPU dentro do esperado.
