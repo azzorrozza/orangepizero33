@@ -4,10 +4,10 @@ Este guia configura o OpenSSH para permitir acesso **exclusivamente por chave p�
 
 Ao final:
 
-- ✔ Root acessa apenas por chave SSH
-- ✔ Usuários comuns acessam apenas por chave SSH
-- ✔ Senhas são recusadas
-- ✔ Login protegido por passphrase da chave
+- ✔ Login do **root** apenas por chave SSH
+- ✔ Login do usuário **azzor** apenas por chave SSH
+- ✔ Autenticação por senha desabilitada
+- ✔ Chave protegida por passphrase
 
 ---
 
@@ -21,11 +21,11 @@ Execute:
 ssh-keygen -t ed25519 -C "azzor"
 ```
 
-Aperte **ENTER** para aceitar o caminho padrão.
+Aceite o caminho padrão pressionando **ENTER**.
 
 Caso solicitado, informe uma **passphrase**.
 
-Verifique se os arquivos foram criados:
+Verifique se a chave foi criada:
 
 ```powershell
 dir ~/.ssh
@@ -40,7 +40,7 @@ id_ed25519.pub
 
 ---
 
-# 2. Instalar a chave na OrangePi
+# 2. Instalar a chave para o usuário root
 
 Copie a chave pública:
 
@@ -48,7 +48,7 @@ Copie a chave pública:
 Get-Content ~/.ssh/id_ed25519.pub | Set-Clipboard
 ```
 
-Conecte-se utilizando senha (primeira configuração):
+Conecte-se utilizando senha:
 
 ```powershell
 ssh root@192.168.1.99
@@ -95,39 +95,81 @@ cat ~/.ssh/authorized_keys
 
 ---
 
-# 3. Confirmar que a chave funciona
+# 3. Instalar a mesma chave para o usuário azzor
 
-Antes de alterar qualquer configuração do OpenSSH, teste o acesso.
+Ainda conectado como **root**, execute:
 
-No Windows:
-
-```powershell
-ssh root@192.168.1.99
+```bash
+mkdir -p /home/azzor/.ssh
+chmod 700 /home/azzor/.ssh
 ```
 
-Deverá solicitar apenas a **passphrase** da chave.
+Adicionar a chave:
 
-Abra um segundo PowerShell e teste novamente:
-
-```powershell
-ssh root@192.168.1.99
+```bash
+cat >> /home/azzor/.ssh/authorized_keys
 ```
 
-Somente prossiga se ambos os logins funcionarem.
+Cole exatamente a mesma chave pública.
+
+Pressione:
+
+```
+ENTER
+```
+
+Depois:
+
+```
+CTRL+D
+```
+
+Corrigir proprietário:
+
+```bash
+chown -R azzor:azzor /home/azzor/.ssh
+```
+
+Corrigir permissões:
+
+```bash
+chmod 600 /home/azzor/.ssh/authorized_keys
+```
+
+Confirmar:
+
+```bash
+cat /home/azzor/.ssh/authorized_keys
+```
 
 ---
 
-# 4. Configurar o OpenSSH
+# 4. Confirmar que ambas as contas funcionam
 
-Criar um backup:
+No Windows, teste o root:
 
-```bash
-cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+```powershell
+ssh root@192.168.1.99
 ```
+
+Depois teste o usuário comum:
+
+```powershell
+ssh azzor@192.168.1.99
+```
+
+Ambos deverão solicitar apenas a **passphrase da chave**.
+
+Somente continue quando os dois logins estiverem funcionando.
+
+---
+
+# 5. Configurar o OpenSSH
 
 Editar:
 
 ```bash
+cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 nano /etc/ssh/sshd_config
 ```
 
@@ -181,13 +223,13 @@ AcceptEnv LANG LC_* COLORTERM NO_COLOR
 Subsystem sftp /usr/lib/openssh/sftp-server
 ```
 
-Verificar o arquivo:
+Verificar:
 
 ```bash
 cat /etc/ssh/sshd_config
 ```
 
-Validar a configuração:
+Validar:
 
 ```bash
 sshd -t
@@ -201,21 +243,27 @@ systemctl restart ssh
 
 ---
 
-# 5. Testar novamente
+# 6. Testar novamente
 
 Sem fechar a sessão atual, abra um novo PowerShell.
 
-Teste:
+Testar o root:
 
 ```powershell
 ssh root@192.168.1.99
 ```
 
-O resultado esperado é:
+Testar o usuário comum:
+
+```powershell
+ssh azzor@192.168.1.99
+```
+
+Os dois logins deverão:
 
 - solicitar apenas a passphrase da chave;
 - não solicitar senha do usuário;
-- login realizado com sucesso.
+- realizar o login normalmente.
 
 Somente depois feche a sessão antiga.
 
@@ -247,13 +295,19 @@ ssh -V
 
 # Confirmar autenticação por chave
 
-No Windows:
+Testar o root:
 
 ```powershell
 ssh -v root@192.168.1.99
 ```
 
-Resultado esperado:
+Testar o usuário comum:
+
+```powershell
+ssh -v azzor@192.168.1.99
+```
+
+Resultado esperado para ambos:
 
 ```text
 Offering public key
@@ -263,7 +317,7 @@ Authenticated using "publickey"
 
 ---
 
-# Validar a configuração ativa
+# Validar a configuração
 
 ```bash
 sshd -T | grep -E 'permitrootlogin|passwordauthentication|pubkeyauthentication|allowagentforwarding|allowtcpforwarding|disableforwarding|x11forwarding'
@@ -285,15 +339,24 @@ x11forwarding no
 
 # Conferir permissões
 
+Root:
+
 ```bash
-ls -ld ~/.ssh
-ls -l ~/.ssh/authorized_keys
+ls -ld /root/.ssh
+ls -l /root/.ssh/authorized_keys
+```
+
+Usuário comum:
+
+```bash
+ls -ld /home/azzor/.ssh
+ls -l /home/azzor/.ssh/authorized_keys
 ```
 
 Resultado esperado:
 
 ```text
-drwx------ ~/.ssh
+drwx------ .ssh
 -rw------- authorized_keys
 ```
 
@@ -303,9 +366,10 @@ drwx------ ~/.ssh
 
 - ✔ Chave ED25519 criada
 - ✔ Chave armazenada em `~/.ssh`
-- ✔ Chave pública instalada na OrangePi
-- ✔ Login do root permitido apenas por chave
-- ✔ Login de usuários permitido apenas por chave
+- ✔ Chave instalada para o usuário **root**
+- ✔ Chave instalada para o usuário **azzor**
+- ✔ Root autenticando apenas por chave
+- ✔ Usuário autenticando apenas por chave
 - ✔ Autenticação por senha desabilitada
-- ✔ Passphrase protegendo a chave privada
+- ✔ Chave protegida por passphrase
 - ✔ OpenSSH configurado com hardening básico
