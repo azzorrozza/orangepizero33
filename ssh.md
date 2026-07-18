@@ -182,13 +182,6 @@ No Windows:
 ssh -v root@192.168.1.99
 ```
 
-Resultado esperado:
-
-```text
-Offering public key
-Authentication succeeded (publickey)
-```
-
 ---
 
 ## Validar a configuração
