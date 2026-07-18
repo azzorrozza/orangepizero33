@@ -1,3 +1,4 @@
+
 ---
 
 # 1. Gerar a chave SSH do root
