@@ -1,15 +1,16 @@
-# OrangePi Zero 3 - SSH com autenticação por chave
+# OrangePi Zero 3 - Configuração Segura do SSH com Chave ED25519
 
-Este guia configura o acesso remoto via **SSH utilizando autenticação por chave pública**, eliminando a necessidade de senha e aumentando significativamente a segurança do servidor.
+Este guia configura o acesso remoto via **SSH utilizando autenticação por chave pública (ED25519)**, eliminando a autenticação por senha e aplicando uma configuração de segurança recomendada para servidores.
 
 Ao final deste guia será possível:
 
-- gerar um par de chaves SSH no Windows;
-- armazenar as chaves na pasta **Downloads**;
+- gerar um par de chaves SSH utilizando o OpenSSH;
+- armazenar as chaves no diretório padrão do sistema;
 - instalar a chave pública na OrangePi;
 - acessar o servidor utilizando apenas a chave privada;
+- aplicar uma configuração endurecida do OpenSSH;
 - desabilitar autenticação por senha;
-- recuperar o acesso caso a chave seja perdida.
+- documentar um procedimento de recuperação de acesso.
 
 ---
 
@@ -23,48 +24,58 @@ Execute:
 ssh-keygen -t ed25519 -C "azzor"
 ```
 
-Quando o comando solicitar o local para salvar a chave, informe o caminho completo incluindo o nome do arquivo:
+Quando for solicitado:
 
 ```text
-C:\Users\azzor\Downloads\azzor_ed25519
+Enter file in which to save the key
 ```
 
-> **Importante:** informe um **nome de arquivo**, e não apenas a pasta `Downloads`. Caso informe somente o diretório, o `ssh-keygen` exibirá um erro informando que o caminho já existe.
-
-Será criado:
+Pressione apenas:
 
 ```text
-C:\Users\azzor\Downloads\
-├── azzor_ed25519
-└── azzor_ed25519.pub
+ENTER
+```
+
+Será utilizado o diretório padrão do OpenSSH:
+
+```text
+C:\Users\<usuario>\.ssh\
+```
+
+Os arquivos criados serão:
+
+```text
+C:\Users\<usuario>\.ssh\
+├── id_ed25519
+└── id_ed25519.pub
 ```
 
 Onde:
 
-- `azzor_ed25519` → chave privada (**NUNCA compartilhe**)
-- `azzor_ed25519.pub` → chave pública (será instalada no servidor)
+- `id_ed25519` → chave privada (**NUNCA compartilhe**)
+- `id_ed25519.pub` → chave pública
 
-Verifique se os arquivos foram criados:
+Verifique:
 
 ```powershell
-dir C:\Users\azzor\Downloads\azzor*
+dir ~/.ssh
 ```
 
 Resultado esperado:
 
 ```text
-azzor_ed25519
-azzor_ed25519.pub
+id_ed25519
+id_ed25519.pub
 ```
 
 ---
 
 # 2. Instalar a chave na OrangePi
 
-Copiar automaticamente a chave pública para a área de transferência:
+Copie a chave pública para a área de transferência:
 
 ```powershell
-Get-Content C:\Users\azzor\Downloads\azzor_ed25519.pub | Set-Clipboard
+Get-Content ~/.ssh/id_ed25519.pub | Set-Clipboard
 ```
 
 Conecte-se normalmente utilizando senha:
@@ -80,14 +91,13 @@ mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 ```
 
-Criar o arquivo de chaves autorizadas:
+Adicionar a chave pública:
 
 ```bash
-touch ~/.ssh/authorized_keys
-nano ~/.ssh/authorized_keys
+cat >> ~/.ssh/authorized_keys
 ```
 
-Cole **todo o conteúdo** da chave pública exatamente como foi gerado.
+Cole a chave pública completa.
 
 Exemplo:
 
@@ -95,9 +105,17 @@ Exemplo:
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH3rMpLejpN7NPPhPbdnZOz1yg03qa8Ex35h6PCcc8yo azzor
 ```
 
-> **Importante:** copie a linha inteira, incluindo o início `ssh-ed25519`.
+Pressione:
 
-Salvar o arquivo.
+```
+ENTER
+```
+
+Depois:
+
+```
+CTRL+D
+```
 
 Corrigir as permissões:
 
@@ -113,25 +131,25 @@ cat ~/.ssh/authorized_keys
 
 ---
 
-# 3. Testar o acesso utilizando a chave
+# 3. Testar a autenticação por chave
 
-Abra um **novo PowerShell**.
+Abra um novo PowerShell.
 
 Execute:
 
 ```powershell
-ssh -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
+ssh root@192.168.1.20
 ```
 
-Caso tenha definido uma **passphrase** durante a criação da chave, ela será solicitada.
+Caso tenha definido uma passphrase, ela será solicitada.
 
-Se tudo estiver correto, o login será realizado **sem solicitar a senha do usuário root**, utilizando apenas a chave SSH.
+O login deverá ocorrer sem solicitar a senha do usuário root.
 
 ---
 
-# 4. Desabilitar autenticação por senha
+# 4. Configurar o OpenSSH
 
-Somente após confirmar que a autenticação por chave funciona corretamente.
+Somente após confirmar que o login por chave funciona.
 
 Editar:
 
@@ -139,19 +157,65 @@ Editar:
 nano /etc/ssh/sshd_config
 ```
 
-Garantir que existam as seguintes opções:
+Utilize a seguinte configuração:
 
 ```text
-PermitRootLogin yes
+Include /etc/ssh/sshd_config.d/*.conf
+
+Port 22
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+
+PermitRootLogin prohibit-password
 PubkeyAuthentication yes
 PasswordAuthentication no
-ChallengeResponseAuthentication no
+KbdInteractiveAuthentication no
+
 UsePAM yes
+
+LoginGraceTime 30
+MaxAuthTries 3
+MaxSessions 5
+StrictModes yes
+
+AllowAgentForwarding no
+AllowTcpForwarding no
+AllowStreamLocalForwarding no
+GatewayPorts no
+PermitTunnel no
+DisableForwarding yes
+
+X11Forwarding no
+
+PermitTTY yes
+PermitUserEnvironment no
+PrintMotd no
+PrintLastLog yes
+
+TCPKeepAlive yes
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+Compression no
+
+SyslogFacility AUTH
+LogLevel VERBOSE
+
+AcceptEnv LANG LC_* COLORTERM NO_COLOR
+
+Subsystem sftp /usr/lib/openssh/sftp-server
 ```
 
-Salvar.
+Salvar o arquivo.
 
-Reiniciar o serviço:
+Verificar a configuração:
+
+```bash
+sshd -t
+```
+
+Se nenhum erro for exibido, reiniciar o serviço:
 
 ```bash
 systemctl restart ssh
@@ -165,21 +229,23 @@ systemctl restart ssh
 
 Não feche a sessão SSH atual.
 
-Abra um segundo terminal no Windows e execute:
+Abra outro PowerShell.
+
+Execute:
 
 ```powershell
-ssh -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
+ssh root@192.168.1.20
 ```
 
-Se o login ocorrer normalmente utilizando apenas a chave SSH, a configuração está correta.
+Se o login ocorrer normalmente utilizando apenas a chave SSH, a configuração foi aplicada corretamente.
 
-Somente então encerre a sessão antiga.
+Somente então feche a sessão antiga.
 
 ---
 
-# 6. (Opcional) Bloquear login direto do root
+# 6. (Opcional) Desabilitar completamente o login do root
 
-Caso futuramente seja criado um usuário administrador, recomenda-se impedir login direto do root.
+Quando existir um usuário administrativo com permissões de sudo, recomenda-se impedir qualquer login direto do root.
 
 Editar:
 
@@ -190,13 +256,21 @@ nano /etc/ssh/sshd_config
 Alterar:
 
 ```text
+PermitRootLogin prohibit-password
+```
+
+para:
+
+```text
 PermitRootLogin no
 ```
 
-ou
+Salvar.
 
-```text
-PermitRootLogin prohibit-password
+Validar:
+
+```bash
+sshd -t
 ```
 
 Reiniciar:
@@ -209,22 +283,29 @@ systemctl restart ssh
 
 # Recuperação de acesso
 
-Caso a chave seja perdida e ainda exista acesso físico à OrangePi (monitor, teclado ou console serial), é possível restaurar o acesso.
-
-Editar:
+Caso a chave seja perdida e ainda exista acesso físico (console, teclado ou serial), editar:
 
 ```bash
 nano /etc/ssh/sshd_config
 ```
 
-Alterar:
+Alterar temporariamente:
 
 ```text
+PermitRootLogin yes
 PasswordAuthentication yes
-ChallengeResponseAuthentication yes
+KbdInteractiveAuthentication yes
 ```
 
-Reiniciar o SSH:
+Salvar.
+
+Validar:
+
+```bash
+sshd -t
+```
+
+Reiniciar:
 
 ```bash
 systemctl restart ssh
@@ -232,16 +313,16 @@ systemctl restart ssh
 
 Após recuperar o acesso:
 
-- gere uma nova chave;
-- instale a nova chave pública;
-- confirme que ela funciona;
-- desabilite novamente a autenticação por senha.
+- gerar uma nova chave;
+- instalar a nova chave pública;
+- confirmar o funcionamento;
+- restaurar a configuração segura do SSH.
 
 ---
 
 # Testes
 
-## Verificar o serviço SSH
+## Verificar o serviço
 
 ```bash
 systemctl status ssh --no-pager
@@ -249,7 +330,7 @@ systemctl status ssh --no-pager
 
 ---
 
-## Confirmar que a porta 22 está aberta
+## Confirmar que a porta está aberta
 
 ```bash
 ss -tlnp | grep :22
@@ -257,7 +338,7 @@ ss -tlnp | grep :22
 
 ---
 
-## Verificar a versão do SSH
+## Verificar a versão
 
 ```bash
 ssh -V
@@ -270,67 +351,63 @@ ssh -V
 No Windows:
 
 ```powershell
-ssh -v -i C:\Users\azzor\Downloads\azzor_ed25519 root@192.168.1.20
+ssh -v root@192.168.1.20
 ```
 
 Resultado esperado:
 
 ```text
-Offering public key:
+Offering public key
 Authentication succeeded (publickey)
 ```
 
 ---
 
-## Verificar permissões
+## Validar a configuração
 
 ```bash
-ls -la ~/.ssh
-
-stat ~/.ssh
-
-stat ~/.ssh/authorized_keys
+sshd -T | grep -E "permitrootlogin|passwordauthentication|pubkeyauthentication|x11forwarding|allowtcpforwarding|disableforwarding"
 ```
 
 Resultado esperado:
 
 ```text
-~/.ssh              -> 700
-
-authorized_keys     -> 600
-```
-
----
-
-## Confirmar a configuração ativa do SSH
-
-```bash
-sshd -T | grep -E "passwordauthentication|pubkeyauthentication|permitrootlogin"
-```
-
-Resultado esperado:
-
-```text
+permitrootlogin prohibit-password
 passwordauthentication no
 pubkeyauthentication yes
-permitrootlogin yes
-```
-
-Caso tenha desabilitado o login do root:
-
-```text
-permitrootlogin no
+x11forwarding no
+allowtcpforwarding no
+disableforwarding yes
 ```
 
 ---
 
-# Estado atual
+## Conferir permissões
+
+```bash
+ls -ld ~/.ssh
+ls -l ~/.ssh/authorized_keys
+```
+
+Resultado esperado:
+
+```text
+drwx------ ~/.ssh
+
+-rw------- authorized_keys
+```
+
+---
+
+# Estado final
 
 - ✔ Chave SSH ED25519 criada
-- ✔ Chave armazenada em `Downloads`
+- ✔ Chave armazenada no diretório padrão do OpenSSH
 - ✔ Chave pública instalada na OrangePi
-- ✔ Permissões do SSH configuradas corretamente
-- ✔ Login utilizando chave SSH funcionando
+- ✔ Login utilizando apenas chave SSH
 - ✔ Autenticação por senha desabilitada
-- ✔ Acesso protegido por chave e passphrase
-- ✔ Procedimento de recuperação de acesso documentado
+- ✔ Login do root permitido apenas por chave
+- ✔ X11 desabilitado
+- ✔ Forwarding desabilitado
+- ✔ Configuração endurecida do OpenSSH aplicada
+- ✔ Procedimento de recuperação documentado
