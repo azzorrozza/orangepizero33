@@ -72,7 +72,7 @@ cat ~/.ssh/authorized_keys
 
 ---
 
-# 4. Configurar o OpenSSH
+# 3. Configurar o OpenSSH
 
 Somente após confirmar que o login por chave funciona.
 
@@ -138,6 +138,7 @@ Salvar o arquivo.
 Verificar a configuração:
 
 ```bash
+cat /etc/ssh/sshd_config
 sshd -t
 ```
 
