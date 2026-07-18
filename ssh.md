@@ -1,67 +1,43 @@
-# OrangePi Zero 3 - SSH com autenticação por chave
-
-Este guia configura o OpenSSH para permitir acesso **exclusivamente por chave pública**, desabilitando completamente a autenticação por senha.
-
-Ao final:
-
-- ✔ Login do **root** apenas por chave SSH
-- ✔ Login do usuário **azzor** apenas por chave SSH
-- ✔ Autenticação por senha desabilitada
-- ✔ Chave protegida por passphrase
-
 ---
 
-# 1. Gerar uma chave SSH
+# 1. Gerar a chave SSH do root
 
 No Windows, abra o **PowerShell**.
 
-Execute:
-
 ```powershell
-ssh-keygen -t ed25519 -C "azzor"
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_root -C "root"
 ```
 
-Aceite o caminho padrão pressionando **ENTER**.
-
-Caso solicitado, informe uma **passphrase**.
-
-Verifique se a chave foi criada:
+Confirmar que a chave foi criada:
 
 ```powershell
 dir ~/.ssh
 ```
 
-Resultado esperado:
-
-```text
-id_ed25519
-id_ed25519.pub
-```
-
 ---
 
-# 2. Instalar a chave para o usuário root
+# 2. Instalar a chave do root
 
-Copie a chave pública:
+Copiar a chave pública:
 
 ```powershell
-Get-Content ~/.ssh/id_ed25519.pub | Set-Clipboard
+Get-Content ~/.ssh/id_ed25519_root.pub | Set-Clipboard
 ```
 
-Conecte-se utilizando senha:
+Conectar utilizando senha (configuração padrão do Armbian):
 
 ```powershell
 ssh root@192.168.1.99
 ```
 
-Criar o diretório SSH:
+Criar o diretório:
 
 ```bash
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 ```
 
-Adicionar a chave pública:
+Adicionar a chave:
 
 ```bash
 cat >> ~/.ssh/authorized_keys
@@ -95,22 +71,68 @@ cat ~/.ssh/authorized_keys
 
 ---
 
-# 3. Instalar a mesma chave para o usuário azzor
+# 3. Testar o login do root por chave
 
-Ainda conectado como **root**, execute:
+No Windows:
+
+```powershell
+ssh -i ~/.ssh/id_ed25519_root root@192.168.1.99
+```
+
+Se entrar normalmente, a chave do root está funcionando.
+
+Saia da sessão:
 
 ```bash
-mkdir -p /home/azzor/.ssh
-chmod 700 /home/azzor/.ssh
+exit
+```
+
+---
+
+# 4. Gerar a chave SSH do usuário azzor
+
+No Windows:
+
+```powershell
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_azzor -C "azzor"
+```
+
+Confirmar:
+
+```powershell
+dir ~/.ssh
+```
+
+---
+
+# 5. Instalar a chave do usuário azzor
+
+Copiar a chave pública:
+
+```powershell
+Get-Content ~/.ssh/id_ed25519_azzor.pub | Set-Clipboard
+```
+
+Entrar utilizando senha:
+
+```powershell
+ssh azzor@192.168.1.99
+```
+
+Criar o diretório:
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
 ```
 
 Adicionar a chave:
 
 ```bash
-cat >> /home/azzor/.ssh/authorized_keys
+cat >> ~/.ssh/authorized_keys
 ```
 
-Cole exatamente a mesma chave pública.
+Cole toda a chave pública.
 
 Pressione:
 
@@ -124,56 +146,50 @@ Depois:
 CTRL+D
 ```
 
-Corrigir proprietário:
-
-```bash
-chown -R azzor:azzor /home/azzor/.ssh
-```
-
 Corrigir permissões:
 
 ```bash
-chmod 600 /home/azzor/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
 ```
 
 Confirmar:
 
 ```bash
-cat /home/azzor/.ssh/authorized_keys
+cat ~/.ssh/authorized_keys
 ```
 
 ---
 
-# 4. Confirmar que ambas as contas funcionam
+# 6. Testar o login do usuário azzor
 
-No Windows, teste o root:
-
-```powershell
-ssh root@192.168.1.99
-```
-
-Depois teste o usuário comum:
+No Windows:
 
 ```powershell
-ssh azzor@192.168.1.99
+ssh -i ~/.ssh/id_ed25519_azzor azzor@192.168.1.99
 ```
 
-Ambos deverão solicitar apenas a **passphrase da chave**.
+Se entrar normalmente, a chave está funcionando.
 
-Somente continue quando os dois logins estiverem funcionando.
+Saia da sessão:
+
+```bash
+exit
+```
 
 ---
 
-# 5. Configurar o OpenSSH
+# 7. Configurar o OpenSSH
+
+**Somente depois que os dois testes acima funcionarem.**
 
 Editar:
 
 ```bash
-cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+rm /etc/ssh/sshd_config
 nano /etc/ssh/sshd_config
 ```
 
-Substitua todo o conteúdo por:
+Utilize a seguinte configuração:
 
 ```text
 Include /etc/ssh/sshd_config.d/*.conf
@@ -223,6 +239,8 @@ AcceptEnv LANG LC_* COLORTERM NO_COLOR
 Subsystem sftp /usr/lib/openssh/sftp-server
 ```
 
+Salvar o arquivo.
+
 Verificar:
 
 ```bash
@@ -243,33 +261,7 @@ systemctl restart ssh
 
 ---
 
-# 6. Testar novamente
-
-Sem fechar a sessão atual, abra um novo PowerShell.
-
-Testar o root:
-
-```powershell
-ssh root@192.168.1.99
-```
-
-Testar o usuário comum:
-
-```powershell
-ssh azzor@192.168.1.99
-```
-
-Os dois logins deverão:
-
-- solicitar apenas a passphrase da chave;
-- não solicitar senha do usuário;
-- realizar o login normalmente.
-
-Somente depois feche a sessão antiga.
-
----
-
-# Verificar o serviço
+# 8. Validar o serviço
 
 ```bash
 systemctl status ssh --no-pager
@@ -277,7 +269,7 @@ systemctl status ssh --no-pager
 
 ---
 
-# Confirmar que a porta está aberta
+# 9. Confirmar a porta SSH
 
 ```bash
 ss -tlnp | grep :22
@@ -285,7 +277,7 @@ ss -tlnp | grep :22
 
 ---
 
-# Verificar a versão
+# 10. Confirmar a versão
 
 ```bash
 ssh -V
@@ -293,21 +285,15 @@ ssh -V
 
 ---
 
-# Confirmar autenticação por chave
+# 11. Testar login do root
 
-Testar o root:
-
-```powershell
-ssh -v root@192.168.1.99
-```
-
-Testar o usuário comum:
+No Windows:
 
 ```powershell
-ssh -v azzor@192.168.1.99
+ssh -v -i ~/.ssh/id_ed25519_root root@192.168.1.99
 ```
 
-Resultado esperado para ambos:
+Resultado esperado:
 
 ```text
 Offering public key
@@ -317,7 +303,25 @@ Authenticated using "publickey"
 
 ---
 
-# Validar a configuração
+# 12. Testar login do usuário azzor
+
+No Windows:
+
+```powershell
+ssh -v -i ~/.ssh/id_ed25519_azzor azzor@192.168.1.99
+```
+
+Resultado esperado:
+
+```text
+Offering public key
+Server accepts key
+Authenticated using "publickey"
+```
+
+---
+
+# 13. Validar a configuração
 
 ```bash
 sshd -T | grep -E 'permitrootlogin|passwordauthentication|pubkeyauthentication|allowagentforwarding|allowtcpforwarding|disableforwarding|x11forwarding'
@@ -326,27 +330,34 @@ sshd -T | grep -E 'permitrootlogin|passwordauthentication|pubkeyauthentication|a
 Resultado esperado:
 
 ```text
-permitrootlogin prohibit-password
+permitrootlogin without-password
 pubkeyauthentication yes
 passwordauthentication no
-allowagentforwarding no
-allowtcpforwarding no
-disableforwarding yes
 x11forwarding no
+allowtcpforwarding no
+allowagentforwarding no
+disableforwarding yes
 ```
 
 ---
 
-# Conferir permissões
-
-Root:
+# 14. Conferir permissões do root
 
 ```bash
 ls -ld /root/.ssh
 ls -l /root/.ssh/authorized_keys
 ```
 
-Usuário comum:
+Resultado esperado:
+
+```text
+drwx------ /root/.ssh
+-rw------- authorized_keys
+```
+
+---
+
+# 15. Conferir permissões do usuário azzor
 
 ```bash
 ls -ld /home/azzor/.ssh
@@ -356,20 +367,24 @@ ls -l /home/azzor/.ssh/authorized_keys
 Resultado esperado:
 
 ```text
-drwx------ .ssh
+drwx------ /home/azzor/.ssh
 -rw------- authorized_keys
 ```
 
 ---
 
-# Estado final
+## Conexões futuras
 
-- ✔ Chave ED25519 criada
-- ✔ Chave armazenada em `~/.ssh`
-- ✔ Chave instalada para o usuário **root**
-- ✔ Chave instalada para o usuário **azzor**
-- ✔ Root autenticando apenas por chave
-- ✔ Usuário autenticando apenas por chave
-- ✔ Autenticação por senha desabilitada
-- ✔ Chave protegida por passphrase
-- ✔ OpenSSH configurado com hardening básico
+### Root
+
+```powershell
+ssh -i ~/.ssh/id_ed25519_root root@192.168.1.99
+```
+
+### Usuário azzor
+
+```powershell
+ssh -i ~/.ssh/id_ed25519_azzor azzor@192.168.1.99
+```
+
+---
