@@ -389,3 +389,113 @@ ssh -i ~/.ssh/id_ed25519_azzor azzor@192.168.1.99
 ```
 
 ---
+
+# 16. Configurar o cliente SSH (Windows)
+
+Criar o arquivo:
+
+```text
+C:\Users\azzor\.ssh\config
+```
+
+Adicionar:
+
+```sshconfig
+Host orangepi
+    HostName 192.168.1.99
+    User azzor
+    IdentityFile ~/.ssh/id_ed25519_azzor
+    IdentitiesOnly yes
+
+Host orangepi-root
+    HostName 192.168.1.99
+    User root
+    IdentityFile ~/.ssh/id_ed25519_root
+    IdentitiesOnly yes
+```
+
+Salvar o arquivo.
+
+---
+
+# 17. Testar os atalhos
+
+### Usuário azzor
+
+```powershell
+ssh orangepi
+```
+
+Resultado esperado:
+
+```text
+Authenticated using "publickey"
+```
+
+---
+
+### Root
+
+```powershell
+ssh orangepi-root
+```
+
+Resultado esperado:
+
+```text
+Authenticated using "publickey"
+```
+
+---
+
+# 18. Conexões futuras
+
+Enquanto o acesso ao **root** estiver permitido:
+
+### Usuário azzor
+
+```powershell
+ssh orangepi
+```
+
+### Root
+
+```powershell
+ssh orangepi-root
+```
+
+---
+
+## Após desabilitar o login do root
+
+Quando alterar no `/etc/ssh/sshd_config`:
+
+```text
+PermitRootLogin no
+```
+
+Reinicie o serviço:
+
+```bash
+systemctl restart ssh
+```
+
+A partir desse momento o acesso administrativo deverá ser feito pelo usuário **azzor**:
+
+```powershell
+ssh orangepi
+```
+
+Caso seja necessário executar comandos administrativos:
+
+```bash
+sudo -i
+```
+
+O atalho `orangepi-root` deixará de funcionar e poderá ser removido do arquivo:
+
+```text
+C:\Users\azzor\.ssh\config
+```
+
+---
