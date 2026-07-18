@@ -360,11 +360,21 @@ check_pipe \
 
 check_pipe \
 "use-dns=false DHCPv4" \
-'grep -R "use-dns: false" /etc/netplan/*.yaml | grep -q dhcp4-overrides'
+'awk "
+/dhcp4-overrides:/ {f=1; next}
+f && /use-dns:[[:space:]]*false/ {ok=1; exit}
+f && /^[^[:space:]]/ {f=0}
+END {exit ok?0:1}
+" /etc/netplan/*.yaml'
 
 check_pipe \
 "use-dns=false DHCPv6" \
-'grep -R "use-dns: false" /etc/netplan/*.yaml | grep -q dhcp6-overrides'
+'awk "
+/dhcp6-overrides:/ {f=1; next}
+f && /use-dns:[[:space:]]*false/ {ok=1; exit}
+f && /^[^[:space:]]/ {f=0}
+END {exit ok?0:1}
+" /etc/netplan/*.yaml'
 
 ###############################################################################
 # Unbound
