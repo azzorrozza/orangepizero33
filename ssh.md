@@ -79,6 +79,7 @@ Somente após confirmar que o login por chave funciona.
 Editar:
 
 ```bash
+rm /etc/ssh/sshd_config
 nano /etc/ssh/sshd_config
 ```
 
