@@ -192,7 +192,7 @@ Authentication succeeded (publickey)
 ## Validar a configuração
 
 ```bash
-sshd -T | grep -E "permitrootlogin|passwordauthentication|pubkeyauthentication|x11forwarding|allowtcpforwarding|disableforwarding"
+sshd -T | grep -E 'permitrootlogin|passwordauthentication|pubkeyauthentication|allowagentforwarding|allowtcpforwarding|disableforwarding|x11forwarding'
 ```
 
 ---
